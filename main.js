@@ -45,13 +45,13 @@ const QUADRANTS = [
     buildings: [
       {
         name: "Wearables Lab", x: 260, y: 230, w: 340, h: 190,
-        wall: "#fbf1de", roof: "#d9824a", trim: "#f7e7cf", windows: 4, awning: true, windowColor: "#cfe6ee", doorColor: "#5b8fa8",
+        style: "future", glow: "#4fd8e0", display: "gadgets",
         door: true, enter: "lab", enterLabel: "enter the Wearables Lab",
       },
       {
         // Bottom-left corner of the block, facing the street toward A World Built for Me.
         name: "Subtitles for the World", x: 40, y: 450, w: 210, h: 118, anchor: "left",
-        wall: "#f3ecf7", roof: "#6f95b5", trim: "#f7f1fb", windows: 2, awning: true, windowColor: "#fff1d6", doorColor: "#c9793a",
+        style: "future", glow: "#a98bf5", display: "captions",
         door: true, enter: "subtitles", enterLabel: "enter Subtitles for the World",
       },
     ],
@@ -620,6 +620,11 @@ function roundRect(g, x, y, w, h, r) {
 // A storybook shop: pitched shingle roof, arched upper windows, a striped
 // awning over framed shop windows, and a front door, all outlined in ink.
 function drawBuilding(g, b) {
+  if (b.style === "future") {
+    drawFutureStore(g, b);
+    drawBuildingName(g, b);
+    return;
+  }
   const { x, y, w, h } = b;
   g.lineJoin = "round";
 
@@ -789,7 +794,11 @@ function drawBuilding(g, b) {
     g.fill();
   }
 
-  // Name plate
+  drawBuildingName(g, b);
+}
+
+function drawBuildingName(g, b) {
+  const { x, y, w, h } = b;
   const k = labelScale(2.4, 0.9);
   g.font = `700 ${13 * k}px Inter, sans-serif`;
   g.textAlign = "center";
@@ -799,6 +808,237 @@ function drawBuilding(g, b) {
   g.strokeText(b.name, x + w / 2, y + h + 12 + 14 * k);
   g.fillStyle = INK;
   g.fillText(b.name, x + w / 2, y + h + 12 + 14 * k);
+}
+
+// A sleek showroom from the near future: curved metal canopy with a glowing
+// edge, a wall of glass showing off what's inside, and sliding glass doors.
+function drawFutureStore(g, b) {
+  const { x, y, w, h } = b;
+  const glow = b.glow;
+  const pulse = 0.75 + 0.25 * Math.sin(animPhase * 2.4);
+  g.lineJoin = "round";
+
+  // Shadow, and light spilling onto the grass from the glass front
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, x - 4, y + 10, w + 12, h, 18);
+  g.fill();
+  g.save();
+  g.globalAlpha = 0.28 * pulse;
+  g.fillStyle = glow;
+  g.beginPath();
+  g.ellipse(x + w / 2, y + h + 6, w * 0.55, 14, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+
+  // Rooftop antenna with a blinking light
+  const ax = x + w - 34;
+  g.strokeStyle = INK;
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(ax, y);
+  g.lineTo(ax, y - 34);
+  g.moveTo(ax - 8, y - 20);
+  g.lineTo(ax + 8, y - 20);
+  g.stroke();
+  const blink = Math.sin(animPhase * 4) > 0.2;
+  g.fillStyle = blink ? "#ff6b6b" : "#9b4a4a";
+  g.beginPath();
+  g.arc(ax, y - 37, 3.5, 0, Math.PI * 2);
+  g.fill();
+  if (blink) {
+    g.fillStyle = "rgba(255,107,107,0.25)";
+    g.beginPath();
+    g.arc(ax, y - 37, 8, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  // Walls: brushed pale metal with soft rounded corners
+  const wall = g.createLinearGradient(x, y, x + w, y + h);
+  wall.addColorStop(0, "#f4f7f9");
+  wall.addColorStop(1, "#d9e1e7");
+  g.fillStyle = wall;
+  roundRect(g, x, y, w, h, 18);
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 2.5;
+  g.stroke();
+
+  // Upper floor: a ribbed slate band with a light strip running through it
+  const bandTop = y + 14;
+  const bandH = h >= 160 ? 44 : 0;
+  if (bandH) {
+    g.fillStyle = "#34404c";
+    roundRect(g, x + 14, bandTop, w - 28, bandH, 10);
+    g.fill();
+    g.strokeStyle = INK;
+    g.lineWidth = 2;
+    g.stroke();
+    g.save();
+    roundRect(g, x + 14, bandTop, w - 28, bandH, 10);
+    g.clip();
+    g.strokeStyle = "rgba(255,255,255,0.08)";
+    g.lineWidth = 3;
+    g.beginPath();
+    for (let rx = x + 22; rx < x + w - 14; rx += 12) {
+      g.moveTo(rx, bandTop);
+      g.lineTo(rx, bandTop + bandH);
+    }
+    g.stroke();
+    // A bright sweep that glides along the strip
+    const stripY = bandTop + bandH / 2;
+    const sweep = x + 14 + ((animPhase * 90) % (w - 28));
+    const strip = g.createLinearGradient(sweep - 60, 0, sweep + 60, 0);
+    strip.addColorStop(0, glow);
+    strip.addColorStop(0.5, "#ffffff");
+    strip.addColorStop(1, glow);
+    g.fillStyle = glow;
+    g.fillRect(x + 14, stripY - 2, w - 28, 4);
+    g.fillStyle = strip;
+    g.fillRect(sweep - 60, stripY - 2, 120, 4);
+    g.restore();
+  }
+
+  // Curved canopy over the storefront, its underside edged in light
+  const canopyY = bandH ? bandTop + bandH + 12 : y + 12;
+  g.fillStyle = "#2c3640";
+  g.beginPath();
+  g.moveTo(x - 10, canopyY + 10);
+  g.quadraticCurveTo(x + w / 2, canopyY - 10, x + w + 10, canopyY + 10);
+  g.lineTo(x + w + 10, canopyY + 18);
+  g.quadraticCurveTo(x + w / 2, canopyY, x - 10, canopyY + 18);
+  g.closePath();
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 2;
+  g.stroke();
+  g.save();
+  g.shadowColor = glow;
+  g.shadowBlur = 12 * pulse;
+  g.strokeStyle = glow;
+  g.lineWidth = 2.5;
+  g.beginPath();
+  g.moveTo(x - 6, canopyY + 17);
+  g.quadraticCurveTo(x + w / 2, canopyY + 1, x + w + 6, canopyY + 17);
+  g.stroke();
+  g.restore();
+
+  // Glass storefront
+  const gx = x + 14, gy = canopyY + 22, gw = w - 28, gh = y + h - gy - 4;
+  const glass = g.createLinearGradient(0, gy, 0, gy + gh);
+  glass.addColorStop(0, "#1f2b36");
+  glass.addColorStop(1, "#2f4150");
+  g.fillStyle = glass;
+  roundRect(g, gx, gy, gw, gh, 8);
+  g.fill();
+  g.save();
+  roundRect(g, gx, gy, gw, gh, 8);
+  g.clip();
+
+  // What's on display inside
+  const doorW = 40;
+  const sideW = (gw - doorW) / 2;
+  if (b.display === "gadgets") {
+    // Glowing pedestals, each with a little ear-worn gadget floating above
+    [0.3, 0.72].forEach((f) => {
+      [sideW * f, gw - sideW * f].forEach((ox, i) => {
+        const px = gx + ox;
+        const py = gy + gh - 4;
+        const bob = Math.sin(animPhase * 2 + ox) * 2;
+        g.fillStyle = "#e8eef2";
+        roundRect(g, px - 9, py - 20, 18, 20, 3);
+        g.fill();
+        g.fillStyle = glow;
+        g.fillRect(px - 9, py - 20, 18, 2.5);
+        g.save();
+        g.shadowColor = glow;
+        g.shadowBlur = 10;
+        g.strokeStyle = i ? "#f6f3ea" : glow;
+        g.lineWidth = 3;
+        g.lineCap = "round";
+        g.beginPath();
+        g.arc(px, py - 32 + bob, 6, Math.PI * 0.7, Math.PI * 2.1);
+        g.stroke();
+        g.restore();
+      });
+    });
+  } else if (b.display === "captions") {
+    // Caption bars drifting up the glass, like subtitles on the world
+    const lines = [0.62, 0.4, 0.82];
+    [[gx + 6, sideW - 12], [gx + sideW + doorW + 6, sideW - 12]].forEach(([cx, cw], side) => {
+      const span = Math.max(20, gh - 10);
+      for (let i = 0; i < 3; i++) {
+        const drift = (animPhase * 8 + (i * span) / 3 + side * 7) % span;
+        const by = gy + gh - 12 - drift;
+        g.globalAlpha = Math.min(1, drift / 8, (span - drift) / 8);
+        g.fillStyle = "rgba(10,14,20,0.85)";
+        roundRect(g, cx, by, cw, 8, 3);
+        g.fill();
+        g.fillStyle = i === 0 ? glow : "#f6f3ea";
+        roundRect(g, cx + 4, by + 3, (cw - 8) * lines[i], 2, 1);
+        g.fill();
+      }
+      g.globalAlpha = 1;
+    });
+  }
+
+  // Reflections sliding across the glass
+  g.fillStyle = "rgba(255,255,255,0.12)";
+  [0, 0.45].forEach((off) => {
+    const rx = gx + ((off * gw + animPhase * 12) % (gw + 60)) - 30;
+    g.beginPath();
+    g.moveTo(rx, gy + gh);
+    g.lineTo(rx + 26, gy);
+    g.lineTo(rx + 40, gy);
+    g.lineTo(rx + 14, gy + gh);
+    g.closePath();
+    g.fill();
+  });
+  g.restore();
+
+  // The glass outline
+  roundRect(g, gx, gy, gw, gh, 8);
+  g.strokeStyle = INK;
+  g.lineWidth = 2;
+  g.stroke();
+
+  // Sliding glass double doors, lit from within, on a glowing threshold
+  if (b.door) {
+    const dx = x + w / 2, dy = y + h;
+    const doorTop = Math.max(gy + 4, dy - 50);
+    g.fillStyle = "#3b5060";
+    roundRect(g, dx - doorW / 2, doorTop, doorW, dy - doorTop - 2, 5);
+    g.fill();
+    g.save();
+    g.globalAlpha = 0.4 * pulse;
+    g.fillStyle = glow;
+    roundRect(g, dx - doorW / 2 + 3, doorTop + 3, doorW - 6, dy - doorTop - 8, 3);
+    g.fill();
+    g.restore();
+    g.strokeStyle = "#c9d3da";
+    g.lineWidth = 2;
+    roundRect(g, dx - doorW / 2, doorTop, doorW, dy - doorTop - 2, 5);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(dx, doorTop + 2);
+    g.lineTo(dx, dy - 4);
+    g.stroke();
+    // Door handles
+    g.strokeStyle = "#f6f3ea";
+    g.beginPath();
+    g.moveTo(dx - 4, dy - 26);
+    g.lineTo(dx - 4, dy - 16);
+    g.moveTo(dx + 4, dy - 26);
+    g.lineTo(dx + 4, dy - 16);
+    g.stroke();
+    // Threshold
+    g.save();
+    g.shadowColor = glow;
+    g.shadowBlur = 10 * pulse;
+    g.fillStyle = glow;
+    roundRect(g, dx - 26, dy - 3, 52, 5, 2.5);
+    g.fill();
+    g.restore();
+  }
 }
 
 function circleRectCollides(cx, cy, r, rect) {
