@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunny Ears</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app" data-scene="world">
+    <canvas id="world"></canvas>
+    <div class="quote-bubble" id="quoteBubble" role="status" hidden></div>
+    <div class="enter-prompt" id="enterPrompt" hidden>Press <kbd>E</kbd> to enter Cafe Lumen</div>
+
+    <header class="hud hud-top">
+      <nav class="minimap" aria-label="Where Alyssa is on the map">
+        <span class="minimap-axis minimap-top">Product</span>
+        <span class="minimap-axis minimap-left">Repair</span>
+        <div class="minimap-grid" id="minimapGrid">
+          <span class="minimap-dot" id="minimapDot" aria-hidden="true"></span>
+        </div>
+        <span class="minimap-axis minimap-right">Augmentation</span>
+        <span class="minimap-axis minimap-bottom">Environment</span>
+      </nav>
+    </header>
+
+    <div class="area-banner" id="areaBanner" aria-live="polite"></div>
+
+    <div class="zoom-controls" role="group" aria-label="Zoom">
+      <button class="zoom-toggle" id="zoomToggle" type="button">Zoom in on Alyssa</button>
+      <button class="zoom-step" id="zoomOut" type="button" aria-label="Zoom out">&minus;</button>
+      <button class="zoom-step" id="zoomIn" type="button" aria-label="Zoom in">+</button>
+    </div>
+
+    <!-- Inside Cafe Lumen, in the evening: lanterns, a shared table, soft music -->
+    <section id="cafeScene" class="scene cafe-scene">
+      <canvas id="cafeCanvas"></canvas>
+      <button class="back-btn" id="cafeBack" type="button">&larr; Back to the city</button>
+      <div class="cafe-header">
+        <h2 class="cafe-title">Cafe Lumen</h2>
+        <p class="cafe-subtitle">Open late &middot; evening</p>
+      </div>
+      <button class="music-pill" id="musicToggle" type="button" aria-pressed="false" aria-label="Mute music">
+        <span class="music-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span class="music-label" id="musicLabel">Soft music playing</span>
+      </button>
+      <p class="hint cafe-hint">Move with <kbd>WASD</kbd> or the arrow keys &middot; walk out the front door or press <kbd>Esc</kbd> to leave</p>
+    </section>
+
+    <!-- Inside the Wearables Lab: a spa-like showroom of wearable ear gadgets -->
+    <section id="labScene" class="scene lab-scene">
+      <canvas id="labCanvas"></canvas>
+      <button class="back-btn" id="labBack" type="button">&larr; Back to the city</button>
+      <div class="lab-header">
+        <p class="lab-eyebrow">Superpower &middot; Product &times; Augmentation</p>
+        <h2 class="lab-title">Wearables Lab</h2>
+      </div>
+      <div class="lab-prompt" id="labPrompt" hidden>
+        <span class="lab-prompt-title">Try on your new superpower</span>
+        <span class="lab-prompt-key">Press <kbd>E</kbd></span>
+      </div>
+      <p class="hint lab-hint">Move with <kbd>WASD</kbd> or the arrow keys &middot; walk up to the fitter to try yours on &middot; walk out the front door or press <kbd>Esc</kbd> to leave</p>
+    </section>
+
+    <!-- Subtitles for the World: three options for captioning everyday sounds -->
+    <section id="subsScene" class="scene subs-scene">
+      <canvas id="subsCanvas"></canvas>
+      <button class="back-btn" id="subsBack" type="button">&larr; Back to the city</button>
+      <div class="lab-header">
+        <p class="lab-eyebrow">Superpower &middot; Product &times; Augmentation</p>
+        <h2 class="lab-title">Subtitles for the World</h2>
+      </div>
+      <div class="subs-card" id="subsCard" role="status" hidden></div>
+      <p class="hint lab-hint">Move with <kbd>WASD</kbd> or the arrow keys &middot; walk up to each device to learn more &middot; walk out the front door or press <kbd>Esc</kbd> to leave</p>
+    </section>
+
+    <!-- The wearable, up close. Placeholder until the industrial design rendering is ready. -->
+    <section id="renderScene" class="scene render-scene">
+      <button class="back-btn" id="renderBack" type="button">&larr; Back to the lab</button>
+      <div class="render-header">
+        <p class="render-eyebrow">Superpower &middot; Product &times; Augmentation</p>
+        <h2 class="render-title">Your new superpower</h2>
+        <p class="render-lede">A hearing aid that also reads your vitals and health information &mdash; less something that fixes you, more something that gives you more.</p>
+      </div>
+      <div class="render-placeholder" role="img" aria-label="Placeholder for the industrial design rendering of the wearable">
+        <span class="render-placeholder-label">Industrial design rendering</span>
+        <span class="render-placeholder-note">Coming soon</span>
+      </div>
+    </section>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
