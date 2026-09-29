@@ -1356,12 +1356,9 @@ function drawBlockTitle(g, q) {
   });
   g.restore();
 
-  // Chalk tray along the bottom rail, with a stick of chalk resting in it
+  // Chalk tray along the bottom rail
   g.fillStyle = "#8a5a33";
   roundRect(g, -botW / 2 + rail + 4, faceH - rail - 2, botW - 2 * rail - 8, 6, 2);
-  g.fill();
-  g.fillStyle = "#f4f1e8";
-  roundRect(g, 92, faceH - rail - 6, 22, 5, 2);
   g.fill();
 
   // Chalk lettering: the axes in the block's colour, the name in white
@@ -1373,20 +1370,10 @@ function drawBlockTitle(g, q) {
   g.fillText(q.axes.toUpperCase(), 0, 34);
   g.letterSpacing = "0px";
   g.font = "36px 'Patrick Hand', 'Chalkboard SE', cursive";
-  const nameW = g.measureText(q.name).width;
   g.fillStyle = "rgba(255,255,255,0.18)"; // a soft chalk-dust halo
   g.fillText(q.name, 1, 71);
   g.fillStyle = "#f6f3ea";
   g.fillText(q.name, 0, 70);
-
-  // A hand-drawn underline in the block's colour
-  g.strokeStyle = chalkTint(q.accent, 0.45);
-  g.lineWidth = 2;
-  g.lineCap = "round";
-  g.beginPath();
-  g.moveTo(-nameW / 2, 78);
-  g.bezierCurveTo(-nameW / 6, 75, nameW / 6, 81, nameW / 2 + 4, 76);
-  g.stroke();
   g.restore();
 }
 
