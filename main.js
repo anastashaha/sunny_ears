@@ -1257,37 +1257,136 @@ function drawSignpost(g, sign) {
   g.restore();
 }
 
-// Each block's name, set into the ground like a plaza plaque.
+// A block colour washed toward white, so it reads like coloured chalk.
+function chalkTint(hex, amount = 0.6) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c) => Math.round(c + (255 - c) * amount);
+  return `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
+}
+
+// Each block's name, chalked onto an A-frame sandwich board out on the pavement.
 function drawBlockTitle(g, q) {
-  const w = 380, h = 84;
+  const topW = 330, botW = 360; // the frame flares out slightly toward the ground
+  const faceH = 100, legH = 22;
+  const rail = 11; // width of the wooden frame around the chalkboard
   g.save();
   g.translate(q.block.x + q.block.w / 2, q.block.y + 34);
   g.scale(labelScale(), labelScale());
-  const cx = 0, top = 0;
-  g.fillStyle = "rgba(60,40,20,0.18)";
-  roundRect(g, cx - w / 2 + 3, top + 6, w, h, 14);
+
+  const frame = (inset) => {
+    const t = inset, b = faceH - inset;
+    const halfAt = (y) => (topW + (botW - topW) * (y / faceH)) / 2 - inset;
+    g.beginPath();
+    g.moveTo(-halfAt(t), t);
+    g.lineTo(halfAt(t), t);
+    g.lineTo(halfAt(b), b);
+    g.lineTo(-halfAt(b), b);
+    g.closePath();
+  };
+
+  // Shadow on the ground, then the back legs peeking out behind the front ones
+  g.fillStyle = "rgba(60,40,20,0.2)";
+  g.beginPath();
+  g.ellipse(4, faceH + legH + 2, botW / 2 + 14, 9, 0, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = "#fdf7ea";
-  roundRect(g, cx - w / 2, top, w, h, 14);
+  g.fillStyle = "#6e4526";
+  [-1, 1].forEach((side) => {
+    roundRect(g, side * (botW / 2 - 16) - 5, faceH - 6, 10, legH + 2, 3);
+    g.fill();
+  });
+
+  // Front legs, splayed a little
+  g.fillStyle = "#9a653b";
+  g.strokeStyle = "#5e3b1f";
+  g.lineWidth = 2;
+  [-1, 1].forEach((side) => {
+    const x = side * (botW / 2);
+    g.beginPath();
+    g.moveTo(x - side * rail, faceH - 4);
+    g.lineTo(x, faceH - 4);
+    g.lineTo(x + side * 5, faceH + legH);
+    g.lineTo(x - side * (rail - 4), faceH + legH);
+    g.closePath();
+    g.fill();
+    g.stroke();
+  });
+
+  // Hinged handle across the top
+  g.fillStyle = "#7d5230";
+  roundRect(g, -46, -9, 92, 13, 5);
   g.fill();
-  g.strokeStyle = INK;
-  g.lineWidth = 2.5;
   g.stroke();
-  g.strokeStyle = q.accent;
-  g.lineWidth = 1.5;
-  roundRect(g, cx - w / 2 + 6, top + 6, w - 12, h - 12, 10);
+  g.fillStyle = "#b8b0a2";
+  [-30, 30].forEach((x) => {
+    g.beginPath();
+    g.arc(x, -3, 2.4, 0, Math.PI * 2);
+    g.fill();
+  });
+
+  // Wooden frame
+  frame(0);
+  const wood = g.createLinearGradient(0, 0, 0, faceH);
+  wood.addColorStop(0, "#c08a57");
+  wood.addColorStop(1, "#a36c40");
+  g.fillStyle = wood;
+  g.fill();
+  g.strokeStyle = "#5e3b1f";
+  g.lineWidth = 2.5;
+  g.lineJoin = "round";
   g.stroke();
 
+  // The chalkboard, with a few faint wiped-out smudges from earlier messages
+  frame(rail);
+  const slate = g.createLinearGradient(0, rail, 0, faceH - rail);
+  slate.addColorStop(0, "#35463d");
+  slate.addColorStop(1, "#2a3830");
+  g.fillStyle = slate;
+  g.fill();
+  g.strokeStyle = "rgba(20,28,24,0.6)";
+  g.lineWidth = 1.5;
+  g.stroke();
+  g.save();
+  frame(rail);
+  g.clip();
+  g.fillStyle = "rgba(255,255,255,0.045)";
+  [[-110, 30, 70, 14, -0.15], [95, 70, 80, 12, 0.1], [20, 24, 50, 9, 0.05]].forEach(([x, y, rx, ry, rot]) => {
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+    g.fill();
+  });
+  g.restore();
+
+  // Chalk tray along the bottom rail, with a stick of chalk resting in it
+  g.fillStyle = "#8a5a33";
+  roundRect(g, -botW / 2 + rail + 4, faceH - rail - 2, botW - 2 * rail - 8, 6, 2);
+  g.fill();
+  g.fillStyle = "#f4f1e8";
+  roundRect(g, 92, faceH - rail - 6, 22, 5, 2);
+  g.fill();
+
+  // Chalk lettering: the axes in the block's colour, the name in white
   g.textAlign = "center";
   g.textBaseline = "alphabetic";
-  g.fillStyle = q.accent;
+  g.fillStyle = chalkTint(q.accent);
   g.font = "600 11px Inter, sans-serif";
   g.letterSpacing = "3px";
-  g.fillText(q.axes.toUpperCase(), cx, top + 28);
+  g.fillText(q.axes.toUpperCase(), 0, 34);
   g.letterSpacing = "0px";
-  g.fillStyle = COLORS.ink;
-  g.font = "600 32px 'Cormorant Garamond', Georgia, serif";
-  g.fillText(q.name, cx, top + 64);
+  g.font = "36px 'Patrick Hand', 'Chalkboard SE', cursive";
+  const nameW = g.measureText(q.name).width;
+  g.fillStyle = "rgba(255,255,255,0.18)"; // a soft chalk-dust halo
+  g.fillText(q.name, 1, 71);
+  g.fillStyle = "#f6f3ea";
+  g.fillText(q.name, 0, 70);
+
+  // A hand-drawn underline in the block's colour
+  g.strokeStyle = chalkTint(q.accent, 0.45);
+  g.lineWidth = 2;
+  g.lineCap = "round";
+  g.beginPath();
+  g.moveTo(-nameW / 2, 78);
+  g.bezierCurveTo(-nameW / 6, 75, nameW / 6, 81, nameW / 2 + 4, 76);
+  g.stroke();
   g.restore();
 }
 
