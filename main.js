@@ -3366,6 +3366,18 @@ const cafeReaders = [
   },
 ];
 
+// Most of the regulars wear hearing aids, in all sorts of colours. One entry
+// per person (friends, then readers): [colour, a pair?], or null for none.
+const CAFE_HEARING_AIDS = [
+  ["#e8889a", true], ["#5fc7b8", false], ["#f2cf5b", true], null,
+  ["#c9ccd1", true], null, ["#b7a6f0", false],
+];
+[...cafeFriends, ...cafeReaders].forEach((p, i) => {
+  p.palette.ears = true;
+  const aid = CAFE_HEARING_AIDS[i];
+  if (aid) [p.hearingAid, p.hearingAidPair] = aid;
+});
+
 // "Subtitles for the World" around the cafe: walk up to one and a card
 // explains what it does. `x`/`y` is where its marker sits; `reach` is how
 // close Alyssa needs to be.
