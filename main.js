@@ -343,7 +343,8 @@ const alyssa = {
   palette: {
     skin: "#e3b48f",
     hair: "#4a2f23",
-    hairStyle: "medium",
+    hairStyle: "bun",
+    ears: true,
     outfit: "#5f7fa3",
     outfitTrim: "#eef1f3",
   },
@@ -677,6 +678,33 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
     });
   }
 
+  // A bun: a round topknot on the crown, tucked behind the head so it shows
+  // from every side, with a little hair tie where it meets the head.
+  if (p.hairStyle === "bun") {
+    g.fillStyle = p.hair;
+    g.beginPath();
+    g.arc(0, -31, 6, 0, Math.PI * 2);
+    g.fill();
+    outline();
+    g.fillStyle = p.outfitTrim;
+    roundRect(g, -3.5, -27.5, 7, 2.6, 1.3);
+    g.fill();
+    outline();
+  }
+
+  // Ears, peeking out either side of the head when seen from the front or back.
+  const dir = ch.facing;
+  const sideways = dir === "left" || dir === "right";
+  if (p.ears && !sideways) {
+    [-1, 1].forEach((side) => {
+      g.fillStyle = p.skin;
+      g.beginPath();
+      g.ellipse(side * 10.2, -16.5, 2.8, 3.8, 0, 0, Math.PI * 2);
+      g.fill();
+      outline();
+    });
+  }
+
   // Head
   g.fillStyle = p.skin;
   g.beginPath();
@@ -684,11 +712,27 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
   g.fill();
   outline();
 
-  // Hair on top: a short fringe for "medium", a close crop for "short".
-  // Both stop above the face and are symmetrical.
+  // Seen side-on, one ear sits on the side of the head, behind the face.
+  if (p.ears && sideways) {
+    const ex = dir === "left" ? 7 : -7;
+    g.fillStyle = p.skin;
+    g.beginPath();
+    g.ellipse(ex, -16.5, 2.6, 3.6, 0, 0, Math.PI * 2);
+    g.fill();
+    outline();
+    g.strokeStyle = "rgba(160,90,70,0.6)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(ex, -16.5, 1.3, Math.PI * 0.6, Math.PI * 1.6, dir === "right");
+    g.stroke();
+  }
+
+  // Hair on top: a short fringe for "medium", hair swept back into the bun
+  // for "bun", a close crop for "short". All stop above the face and are
+  // symmetrical.
   g.fillStyle = p.hair;
   g.beginPath();
-  if (p.hairStyle === "medium") {
+  if (p.hairStyle === "medium" || p.hairStyle === "bun") {
     g.arc(0, -19, 10.5, Math.PI * 1.08, Math.PI * 1.92);
   } else {
     g.arc(0, -20, 10.5, Math.PI * 1.0, Math.PI * 2.0);
@@ -699,7 +743,6 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
 
   // A simple, cute face: two dot eyes and rosy cheeks, turned the way they're
   // facing (nothing when facing away).
-  const dir = ch.facing;
   if (dir !== "up") {
     const shift = dir === "left" ? -3.5 : dir === "right" ? 3.5 : 0;
     g.fillStyle = "rgba(226,120,110,0.35)";
