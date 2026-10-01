@@ -541,6 +541,15 @@ const MOVE_KEYS = new Set([
 window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
 
+  // While the phone is up, keys only close it (and never move Alyssa).
+  if (phoneOpen) {
+    if (k === "e" || k === "enter" || k === "escape" || k === " ") {
+      e.preventDefault();
+      closePhone();
+    }
+    return;
+  }
+
   if (k === "escape") {
     if (currentScene === "cafe") leaveCafe();
     else if (currentScene === "lab") leaveLab();
@@ -560,6 +569,7 @@ window.addEventListener("keydown", (e) => {
     if ((k === "e" || k === "enter") && nearPickup()) {
       e.preventDefault();
       alyssa.hearingAid = HEARING_AID_COLOR;
+      openPhone();
       return;
     }
     if ((k === "e" || k === "enter") && nearFitter()) {
@@ -2132,10 +2142,33 @@ function nearPickup() {
 
 const labPromptTitleEl = labPromptEl.querySelector(".lab-prompt-title");
 
+// The phone that pops up once Alyssa has her hearing aid, welcoming her to
+// the app that keeps track of her data.
+const phonePopupEl = document.getElementById("phonePopup");
+const phoneCloseEl = document.getElementById("phoneClose");
+let phoneOpen = false;
+
+function openPhone() {
+  phoneOpen = true;
+  keys.clear();
+  alyssa.moving = false;
+  labPromptEl.hidden = true;
+  phonePopupEl.hidden = false;
+  phoneCloseEl.focus();
+}
+
+function closePhone() {
+  phoneOpen = false;
+  phonePopupEl.hidden = true;
+}
+
+phoneCloseEl.addEventListener("click", closePhone);
+
 document.getElementById("labBack").addEventListener("click", leaveLab);
 document.getElementById("renderBack").addEventListener("click", () => setScene("lab"));
 
 function updateLab(dt) {
+  if (phoneOpen) return;
   stepCharacter(alyssa, dt, LAB_MOVE_SPEED, labObstacles, LAB_BOUNDS);
   if (alyssa.y > LAB.h - LAB.wall + 4) {
     leaveLab();
