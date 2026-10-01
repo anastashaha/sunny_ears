@@ -291,6 +291,19 @@ kbd {
   border-color: var(--cafe-border);
 }
 
+/* The card explaining a cafe "subtitle", in the cafe's evening colours. */
+.subs-card.cafe-card {
+  z-index: 1;
+  background: rgba(38, 28, 26, 0.94);
+  border-color: var(--cafe-border);
+  border-top-color: var(--cafe-accent);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.subs-card.cafe-card .subs-card-option { color: var(--cafe-accent); }
+.subs-card.cafe-card .subs-card-name { color: var(--cafe-ink); }
+.subs-card.cafe-card .subs-card-desc { color: var(--cafe-ink-soft); }
+
 .cafe-hint kbd {
   background: rgba(255, 226, 180, 0.12);
   color: var(--cafe-ink);

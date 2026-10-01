@@ -3292,53 +3292,113 @@ const CAFE_BOUNDS = { width: CAFE.w, height: CAFE.h };
 const CAFE_MOVE_SPEED = 150;
 
 const cafeCounter = { x: 56, y: 26, w: 320, h: 78 };
-const cafeTable = { x: 300, y: 272, w: 300, h: 104 };
-const cafeRoundTables = [{ x: 768, y: 250, r: 36 }, { x: 768, y: 470, r: 36 }];
-const cafeSofa = { x: 30, y: 385, w: 54, h: 160 };
-const cafeCoffeeTable = { x: 150, y: 465, r: 26 };
-const cafeShelf = { x: 848, y: 330, w: 26, h: 96 };
-const cafePlants = [{ x: 62, y: 590 }, { x: 838, y: 590 }, { x: 838, y: 130 }];
 const cafeStools = [110, 180, 250, 320].map((x) => ({ x, y: 128 }));
+
+// The friends' table in the middle of the room, and two smaller tables to
+// hang out at. Every table has a 360° caption screen at its centre.
+const cafeFriendsTable = { x: 450, y: 320, r: 70 };
+const cafeRoundTables = [{ x: 760, y: 220, r: 40 }, { x: 760, y: 480, r: 40 }];
+
+// The reading corner: a rug, a tall bookshelf on the wall, floor cushions
+// and a "quiet light".
+const cafeReadingRug = { x: 150, y: 470, r: 112 };
+const cafeBookshelf = { x: 30, y: 340, w: 30, h: 200 };
+const cafeQuietLamp = { x: 252, y: 400, r: 11 };
+const cafeRhythmWall = { x: 850, y: 290, w: 24, h: 120 };
+const cafePlants = [{ x: 62, y: 595 }, { x: 838, y: 595 }, { x: 838, y: 110 }];
 
 // Chairs: `back` is the side the backrest sits on (away from the table).
 const cafeChairs = [
-  ...[370, 450, 530].map((x) => ({ x, y: 252, back: "up" })),
-  ...[370, 450, 530].map((x) => ({ x, y: 396, back: "down" })),
-  { x: 282, y: 324, back: "left" },
-  { x: 618, y: 324, back: "right" },
+  { x: 450, y: 222, back: "up" },
+  { x: 450, y: 418, back: "down" },
+  { x: 352, y: 320, back: "left" },
+  { x: 548, y: 320, back: "right" },
   ...cafeRoundTables.flatMap((t) => [
-    { x: t.x - 54, y: t.y, back: "left" },
-    { x: t.x + 54, y: t.y, back: "right" },
+    { x: t.x - 58, y: t.y, back: "left" },
+    { x: t.x + 58, y: t.y, back: "right" },
   ]),
 ];
 
-// People already gathered at the shared table.
-const cafePatrons = [
+// Four friends hanging out, their conversation captioned on the table's screen.
+const cafeFriends = [
   {
-    x: 450, y: 250, facing: "down",
-    palette: { skin: "#d9a27a", hair: "#2b2320", hairStyle: "short", outfit: "#6b5b8c", outfitTrim: "#e9e1f2" },
+    name: "Maya", color: "#f2b36b", x: 450, y: 226, facing: "down",
+    palette: { skin: "#d9a27a", hair: "#2b2320", hairStyle: "medium", outfit: "#6b5b8c", outfitTrim: "#e9e1f2" },
   },
   {
-    x: 618, y: 322, facing: "left",
-    palette: { skin: "#f2d0b0", hair: "#b5793f", hairStyle: "medium", outfit: "#c9a24a", outfitTrim: "#f5ecd6" },
+    name: "Theo", color: "#8fd3c7", x: 548, y: 324, facing: "left",
+    palette: { skin: "#f2d0b0", hair: "#b5793f", hairStyle: "short", outfit: "#c9a24a", outfitTrim: "#f5ecd6" },
   },
   {
-    x: 370, y: 398, facing: "up",
-    palette: { skin: "#8d5a3b", hair: "#1d1713", hairStyle: "short", outfit: "#4f7a78", outfitTrim: "#e1efe9" },
+    name: "Priya", color: "#f0a3c4", x: 450, y: 420, facing: "up",
+    palette: { skin: "#8d5a3b", hair: "#1d1713", hairStyle: "medium", outfit: "#4f7a78", outfitTrim: "#e1efe9" },
+  },
+  {
+    name: "Sam", color: "#b7a6f0", x: 352, y: 324, facing: "right",
+    palette: { skin: "#c98a55", hair: "#3a2419", hairStyle: "short", outfit: "#a6523f", outfitTrim: "#f7dfd2" },
   },
 ];
 
-// Hanging paper lanterns (and a couple of table candles) — the room's only light.
+// What they're talking about: [which friend, what they said].
+const cafeConversation = [
+  [0, "wait, you went to the tide pools this morning?"],
+  [1, "yeah! there was an octopus hiding under a rock"],
+  [2, "no way. did you get a picture?"],
+  [3, "he was too busy screaming, honestly"],
+  [1, "it waved at me, okay? i panicked"],
+  [0, "ok, we're all going back next weekend"],
+];
+const CAFE_LINE_SECONDS = 3.4;
+
+// Readers on floor cushions in the reading corner.
+const cafeReaders = [
+  {
+    x: 104, y: 420, facing: "right", book: "#a6523f",
+    palette: { skin: "#f0c9a4", hair: "#a8a29a", hairStyle: "medium", outfit: "#5f7f86", outfitTrim: "#e1efe9" },
+  },
+  {
+    x: 196, y: 470, facing: "down", book: "#5f7f86",
+    palette: { skin: "#b97a56", hair: "#241c15", hairStyle: "short", outfit: "#c98f5a", outfitTrim: "#fbe9d6" },
+  },
+  {
+    x: 118, y: 540, facing: "right", book: "#d9b56b",
+    palette: { skin: "#e8b98a", hair: "#7a4a2a", hairStyle: "medium", outfit: "#8a6aa0", outfitTrim: "#efe6f6" },
+  },
+];
+
+// "Subtitles for the World" around the cafe: walk up to one and a card
+// explains what it does. `x`/`y` is where its marker sits; `reach` is how
+// close Alyssa needs to be.
+const cafeTech = [
+  {
+    id: "table", name: "360° caption screen", x: cafeFriendsTable.x, y: cafeFriendsTable.y - 6, reach: 150,
+    description: "Every table has one. It captions the conversation around it, facing every seat, so everyone can follow along even when people talk over each other.",
+  },
+  {
+    id: "coaster", name: "Order coasters", x: 356, y: 62, reach: 100,
+    description: "Instead of calling names over the noise, the barista hands you a coaster that glows and buzzes when your drink is ready.",
+  },
+  {
+    id: "rhythm", name: "Rhythm wall", x: cafeRhythmWall.x + 6, y: cafeRhythmWall.y + cafeRhythmWall.h / 2, reach: 100,
+    description: "Lights that move with the music's beat and bass, so you can see the song as well as hear it.",
+  },
+  {
+    id: "quiet", name: "Quiet light", x: cafeQuietLamp.x, y: cafeQuietLamp.y - 8, reach: 90,
+    description: "Glows green when the reading corner is calm and amber when the room gets loud, so anyone can find the easiest spot to hear and be heard.",
+  },
+];
+
+// Hanging paper lanterns (and table candles): the room's only light.
 const cafeLanterns = [
-  { x: 380, y: 324, r: 200 },
-  { x: 520, y: 324, r: 200 },
+  { x: 400, y: 300, r: 210 },
+  { x: 500, y: 340, r: 210 },
   { x: 216, y: 170, r: 180 },
-  { x: 768, y: 250, r: 150 },
-  { x: 768, y: 470, r: 150 },
-  { x: 150, y: 465, r: 160 },
+  { x: 760, y: 220, r: 150 },
+  { x: 760, y: 480, r: 150 },
+  { x: 150, y: 470, r: 190 },
   { x: 530, y: 560, r: 160 },
 ];
-const cafeCandles = cafeRoundTables.map((t) => ({ x: t.x + 14, y: t.y - 10, r: 70 }));
+const cafeCandles = cafeRoundTables.map((t) => ({ x: t.x + 18, y: t.y + 14, r: 70 }));
 
 const cafeObstacles = [
   { x: 0, y: 0, w: CAFE.w, h: CAFE.wall },
@@ -3349,18 +3409,22 @@ const cafeObstacles = [
     x: CAFE.doorX + CAFE.doorW / 2, y: CAFE.h - CAFE.wall,
     w: CAFE.w - (CAFE.doorX + CAFE.doorW / 2), h: CAFE.wall,
   },
-  cafeCounter, cafeTable, cafeSofa, cafeShelf,
+  cafeCounter, cafeBookshelf, cafeRhythmWall,
+  circleBox(cafeFriendsTable),
   ...cafeRoundTables.map((t) => circleBox(t)),
-  circleBox(cafeCoffeeTable),
+  circleBox(cafeQuietLamp),
+  ...[...cafeFriends, ...cafeReaders].map((p) => ({ x: p.x - 13, y: p.y - 10, w: 26, h: 26 })),
   ...cafePlants.map((p) => circleBox(p, 15)),
 ];
 
 const cafeCanvas = document.getElementById("cafeCanvas");
 const cafeCtx = cafeCanvas.getContext("2d");
+const cafeCardEl = document.getElementById("cafeCard");
 // Offscreen layer for the evening darkness, with holes cut out by each light.
 const cafeLight = document.createElement("canvas");
 const cafeLightCtx = cafeLight.getContext("2d");
 const cafeView = { scale: 1, ox: 0, oy: 0 };
+let cafeActiveTech = null;
 
 function resizeCafeCanvas() {
   [cafeCanvas, cafeLight].forEach((c) => {
@@ -3397,6 +3461,8 @@ function leaveCafe() {
   ch.moving = false;
   seedCompanion(32, 2);
   cafeMusic.stop();
+  cafeCardEl.hidden = true;
+  cafeActiveTech = null;
   setScene("world");
 }
 
@@ -3407,7 +3473,31 @@ function updateCafe(dt) {
   stepCharacter(ch, dt, CAFE_MOVE_SPEED, cafeObstacles, CAFE_BOUNDS);
   updateCompanion(dt);
   // Stepping through the doorway takes you back outside.
-  if (ch.y > CAFE.h - CAFE.wall + 4) leaveCafe();
+  if (ch.y > CAFE.h - CAFE.wall + 4) {
+    leaveCafe();
+    return;
+  }
+
+  // Explain whichever "subtitle" Alyssa is standing near.
+  let near = null, nearDist = Infinity;
+  cafeTech.forEach((tech) => {
+    const d = Math.hypot(ch.x - tech.x, ch.y - tech.y);
+    if (d < tech.reach && d < nearDist) {
+      near = tech;
+      nearDist = d;
+    }
+  });
+  if (near !== cafeActiveTech) {
+    cafeActiveTech = near;
+    cafeCardEl.hidden = !near;
+    if (near) {
+      cafeCardEl.innerHTML = `
+        <p class="subs-card-option">Subtitles for the World</p>
+        <p class="subs-card-name">${near.name}</p>
+        <p class="subs-card-desc">${near.description}</p>
+      `;
+    }
+  }
 }
 
 function drawCafeRoom(g) {
@@ -3419,25 +3509,30 @@ function drawCafeRoom(g) {
     wall: "#4a352b", wallTrim: "#5e4536", doorway: "#221c2b", mat: "#9a6b3f",
     rugs: [
       () => {
-        roundRect(g, 250, 222, 400, 206, 16);
+        // Under the friends' table
+        g.beginPath();
+        g.arc(cafeFriendsTable.x, cafeFriendsTable.y, 150, 0, Math.PI * 2);
         g.fillStyle = "#8a3f35";
         g.fill();
         ink(g, 2.5);
         g.strokeStyle = "#c27a5c";
         g.lineWidth = 3;
-        roundRect(g, 262, 234, 376, 182, 10);
+        g.beginPath();
+        g.arc(cafeFriendsTable.x, cafeFriendsTable.y, 138, 0, Math.PI * 2);
         g.stroke();
       },
       () => {
+        // The reading corner
+        const r = cafeReadingRug;
         g.beginPath();
-        g.arc(cafeCoffeeTable.x - 10, cafeCoffeeTable.y, 100, 0, Math.PI * 2);
+        g.arc(r.x, r.y, r.r, 0, Math.PI * 2);
         g.fillStyle = "#4f6b52";
         g.fill();
         ink(g, 2.5);
         g.strokeStyle = "#7f9d7a";
         g.lineWidth = 2;
         g.beginPath();
-        g.arc(cafeCoffeeTable.x - 10, cafeCoffeeTable.y, 86, 0, Math.PI * 2);
+        g.arc(r.x, r.y, r.r - 14, 0, Math.PI * 2);
         g.stroke();
       },
     ],
@@ -3461,18 +3556,25 @@ function drawCafeRoom(g) {
   });
 
   drawCafeCounter(g);
-  drawCafeCorner(g);
 
-  // Low bookshelf against the right wall
-  roundRect(g, cafeShelf.x, cafeShelf.y, cafeShelf.w, cafeShelf.h, 4);
+  // Tall bookshelf on the wall of the reading corner
+  const bs = cafeBookshelf;
+  roundRect(g, bs.x, bs.y, bs.w, bs.h, 4);
   g.fillStyle = "#5a3d2c";
   g.fill();
   ink(g, 2);
   const spines = ["#a6523f", "#d9b56b", "#5f7f86", "#8a6aa0", "#6f915f", "#c98f5a"];
-  for (let i = 0; i < 12; i++) {
-    g.fillStyle = spines[i % spines.length];
-    g.fillRect(cafeShelf.x + 5, cafeShelf.y + 5 + i * 7.3, 16, 5.5);
+  for (let i = 0; i < 26; i++) {
+    g.fillStyle = spines[(i * 5) % spines.length];
+    g.fillRect(bs.x + 5, bs.y + 6 + i * 7.4, 18 + (i % 3) * 2, 5.5);
   }
+
+  // The rhythm wall: a panel of light bars on the right wall (lit up after the lighting pass)
+  const rw = cafeRhythmWall;
+  roundRect(g, rw.x, rw.y, rw.w, rw.h, 5);
+  g.fillStyle = "#2b2230";
+  g.fill();
+  ink(g, 2);
 
   cafePlants.forEach((p) => drawPottedPlant(g, p));
 }
@@ -3520,10 +3622,19 @@ function drawCafeCounter(g) {
   }
 
   // Register
-  roundRect(g, 304, 42, 36, 28, 4);
+  roundRect(g, 296, 42, 34, 28, 4);
   g.fillStyle = "#2e2622";
   g.fill();
   ink(g, 1.5);
+
+  // A stack of order coasters (they light up after the lighting pass)
+  [[356, 62], [344, 82]].forEach(([x, y]) => {
+    g.beginPath();
+    g.arc(x, y, 10, 0, Math.PI * 2);
+    g.fillStyle = "#3a2c26";
+    g.fill();
+    ink(g, 1.6);
+  });
 
   // Stools along the counter
   cafeStools.forEach((s) => {
@@ -3538,41 +3649,6 @@ function drawCafeCounter(g) {
     g.fill();
     ink(g, 1.2);
   });
-}
-
-function drawCafeCorner(g) {
-  // Sofa against the left wall
-  const s = cafeSofa;
-  g.fillStyle = "rgba(0,0,0,0.25)";
-  roundRect(g, s.x + 3, s.y + 6, s.w, s.h, 10);
-  g.fill();
-  roundRect(g, s.x, s.y, s.w, s.h, 10);
-  g.fillStyle = "#7a4e5e";
-  g.fill();
-  ink(g, 2.5);
-  for (let i = 0; i < 3; i++) {
-    roundRect(g, s.x + 16, s.y + 12 + i * 46, s.w - 22, 42, 7);
-    g.fillStyle = "#9a6a7a";
-    g.fill();
-    ink(g, 1.5);
-  }
-
-  // Coffee table with a book and a mug
-  const t = cafeCoffeeTable;
-  g.beginPath();
-  g.arc(t.x, t.y, t.r, 0, Math.PI * 2);
-  g.fillStyle = "#9b6b46";
-  g.fill();
-  ink(g, 2.2);
-  g.save();
-  g.translate(t.x - 5, t.y + 3);
-  g.rotate(-0.3);
-  g.fillStyle = "#a6523f";
-  g.fillRect(-10, -7, 20, 14);
-  g.fillStyle = "#f1e6d2";
-  g.fillRect(-9, -6, 1.5, 12);
-  g.restore();
-  drawCafeCup(g, t.x + 12, t.y - 10);
 }
 
 function drawCafeCup(g, x, y) {
@@ -3605,86 +3681,288 @@ function drawCafeChair(g, c) {
   ink(g, 1.6);
 }
 
-function drawCafeTable(g) {
-  const T = cafeTable;
-  g.fillStyle = "rgba(0,0,0,0.28)";
-  roundRect(g, T.x + 4, T.y + 8, T.w, T.h, 14);
-  g.fill();
-  roundRect(g, T.x, T.y, T.w, T.h, 14);
-  g.fillStyle = "#a8774f";
-  g.fill();
-  ink(g, 2.8);
-  g.strokeStyle = "rgba(90,55,30,0.25)";
-  g.lineWidth = 1;
-  g.beginPath();
-  for (let y = T.y + 20; y < T.y + T.h - 8; y += 16) {
-    g.moveTo(T.x + 14, y);
-    g.lineTo(T.x + T.w - 14, y);
-  }
-  g.stroke();
-
-  // A place setting in front of every chair
-  [370, 450, 530].forEach((x) => {
-    drawCafeCup(g, x, T.y + 18);
-    drawCafeCup(g, x, T.y + T.h - 18);
-  });
-  drawCafeCup(g, T.x + 18, T.y + T.h / 2);
-  drawCafeCup(g, T.x + T.w - 18, T.y + T.h / 2);
-
-  // Teapot to share
-  g.fillStyle = "#5f7f86";
-  g.beginPath();
-  g.rect(460, 320, 10, 4);
-  g.fill();
-  ink(g, 1.2);
-  g.beginPath();
-  g.arc(450, 324, 12, 0, Math.PI * 2);
-  g.fill();
-  ink(g, 1.8);
-  g.fillStyle = "#86a4aa";
-  g.beginPath();
-  g.arc(450, 324, 5, 0, Math.PI * 2);
-  g.fill();
-
-  // Plate of pastries
-  g.fillStyle = "#efe6d8";
-  g.beginPath();
-  g.arc(418, 344, 13, 0, Math.PI * 2);
-  g.fill();
-  ink(g, 1.5);
-  g.fillStyle = "#d9a45b";
-  [[-4, -3], [5, -2], [0, 5]].forEach(([dx, dy]) => {
-    g.beginPath();
-    g.arc(418 + dx, 344 + dy, 4.5, 0, Math.PI * 2);
-    g.fill();
-  });
-
-  // Little vase of flowers
-  g.fillStyle = "#8fa6ac";
-  g.beginPath();
-  g.arc(484, 306, 5, 0, Math.PI * 2);
-  g.fill();
-  [["#e7a0a0", -5, -4], ["#f3d27a", 4, -5], ["#e7a0a0", 5, 4], ["#f6efe2", -4, 5]].forEach(
-    ([color, dx, dy]) => {
-      g.fillStyle = color;
-      g.beginPath();
-      g.arc(484 + dx, 306 + dy, 3, 0, Math.PI * 2);
-      g.fill();
-    }
-  );
-}
-
-function drawCafeRoundTable(g, t) {
+// A round wooden table with the 360° caption screen at its centre: a dark
+// puck ringed with a band of screen. Its glow and captions go on after the
+// lighting pass (drawCafeScreens).
+function drawCafeRoundTable(g, t, cups) {
   g.fillStyle = "rgba(0,0,0,0.28)";
   g.beginPath();
-  g.arc(t.x + 3, t.y + 6, t.r, 0, Math.PI * 2);
+  g.arc(t.x + 4, t.y + 8, t.r, 0, Math.PI * 2);
   g.fill();
   g.fillStyle = "#a8774f";
   g.beginPath();
   g.arc(t.x, t.y, t.r, 0, Math.PI * 2);
   g.fill();
   ink(g, 2.8);
-  drawCafeCup(g, t.x - 14, t.y + 10);
+  cups.forEach(([dx, dy]) => drawCafeCup(g, t.x + dx, t.y + dy));
+  const pr = t.r > 50 ? 22 : 15;
+  g.beginPath();
+  g.arc(t.x, t.y - 4, pr, 0, Math.PI * 2);
+  g.fillStyle = "#231c22";
+  g.fill();
+  ink(g, 2);
+  g.beginPath();
+  g.arc(t.x, t.y - 4, pr - 6, 0, Math.PI * 2);
+  g.fillStyle = "#3a3038";
+  g.fill();
+}
+
+function drawCafeFriendsTable(g) {
+  const t = cafeFriendsTable;
+  drawCafeRoundTable(g, t, [[0, -46], [46, 4], [0, 50], [-46, 4]]);
+  // A plate of pastries to share
+  g.fillStyle = "#efe6d8";
+  g.beginPath();
+  g.arc(t.x + 30, t.y + 30, 11, 0, Math.PI * 2);
+  g.fill();
+  ink(g, 1.5);
+  g.fillStyle = "#d9a45b";
+  [[-3, -3], [4, -1], [0, 4]].forEach(([dx, dy]) => {
+    g.beginPath();
+    g.arc(t.x + 30 + dx, t.y + 30 + dy, 3.8, 0, Math.PI * 2);
+    g.fill();
+  });
+}
+
+// A reader sitting on a floor cushion, with an open book in their hands.
+function drawCafeReader(g, r, i) {
+  g.fillStyle = "rgba(0,0,0,0.25)";
+  g.beginPath();
+  g.ellipse(r.x + 2, r.y + 14, 26, 12, 0, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.ellipse(r.x, r.y + 10, 25, 13, 0, 0, Math.PI * 2);
+  g.fillStyle = ["#c27a5c", "#d9b56b", "#7f9d7a"][i % 3];
+  g.fill();
+  ink(g, 2);
+  g.strokeStyle = "rgba(255,255,255,0.25)";
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.ellipse(r.x, r.y + 8, 17, 7, 0, 0, Math.PI * 2);
+  g.stroke();
+
+  drawCharacter(g, r, r.x, r.y, 1.4, animPhase * 0.4 + i * 2.1, false);
+
+  // The open book, held in front of them
+  const side = r.facing === "left" ? -1 : r.facing === "right" ? 1 : 0;
+  const bx = r.x + side * 14, by = r.y - 2;
+  g.save();
+  g.translate(bx, by);
+  g.rotate(side * 0.25);
+  roundRect(g, -13, -8, 26, 16, 2);
+  g.fillStyle = r.book;
+  g.fill();
+  ink(g, 1.6);
+  g.fillStyle = "#f6efe2";
+  roundRect(g, -11, -6.5, 10, 13, 1.5);
+  g.fill();
+  roundRect(g, 1, -6.5, 10, 13, 1.5);
+  g.fill();
+  g.strokeStyle = "rgba(62,50,38,0.35)";
+  g.lineWidth = 0.8;
+  g.beginPath();
+  [-3, 0, 3].forEach((dy) => {
+    g.moveTo(-9, dy);
+    g.lineTo(-3, dy);
+    g.moveTo(3, dy);
+    g.lineTo(9, dy);
+  });
+  g.stroke();
+  g.restore();
+}
+
+// The quiet light: a floor lamp beside the reading corner, glowing green
+// while the corner is calm. Its glow is added after the lighting pass.
+function drawCafeQuietLamp(g) {
+  const l = cafeQuietLamp;
+  g.fillStyle = "rgba(0,0,0,0.25)";
+  g.beginPath();
+  g.ellipse(l.x + 2, l.y + 8, 14, 5, 0, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.arc(l.x, l.y, 9, 0, Math.PI * 2);
+  g.fillStyle = "#3a2c26";
+  g.fill();
+  ink(g, 1.6);
+  roundRect(g, l.x - 2, l.y - 36, 4, 34, 2);
+  g.fillStyle = "#3a2c26";
+  g.fill();
+  ink(g, 1.2);
+}
+
+// Glowing things that should shine through the evening darkness: the
+// caption screens (and the friends' captions), the order coaster, the rhythm
+// wall and the quiet light, plus a soft marker on each one you can learn about.
+function drawCafeScreens(g, t) {
+  const glowDisc = (x, y, r, color) => {
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = grad;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  };
+
+  // Idle screens on the smaller tables: a slow, sleepy shimmer
+  cafeRoundTables.forEach((tb, i) => {
+    const pr = 15;
+    glowDisc(tb.x, tb.y - 4, 34, "rgba(143,211,255,0.18)");
+    g.strokeStyle = "rgba(143,211,255,0.55)";
+    g.lineWidth = 3;
+    g.beginPath();
+    g.arc(tb.x, tb.y - 4, pr - 3, 0, Math.PI * 2);
+    g.stroke();
+    const a = t * 0.8 + i * 2;
+    g.strokeStyle = "rgba(220,240,255,0.9)";
+    g.beginPath();
+    g.arc(tb.x, tb.y - 4, pr - 3, a, a + 0.9);
+    g.stroke();
+  });
+
+  // The friends' table: the ring lights up toward whoever's talking, and
+  // their words appear as a caption with their name in their colour.
+  const ft = cafeFriendsTable;
+  const n = Math.floor(t / CAFE_LINE_SECONDS) % cafeConversation.length;
+  const into = (t % CAFE_LINE_SECONDS) / CAFE_LINE_SECONDS;
+  const [who, line] = cafeConversation[n];
+  const friend = cafeFriends[who];
+  const angle = Math.atan2(friend.y - 20 - ft.y, friend.x - ft.x);
+  glowDisc(ft.x, ft.y - 4, 60, "rgba(143,211,255,0.22)");
+  g.lineCap = "round";
+  g.strokeStyle = "rgba(143,211,255,0.6)";
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(ft.x, ft.y - 4, 19, 0, Math.PI * 2);
+  g.stroke();
+  // Little lines of text running round the band, like a 360° screen
+  g.strokeStyle = "rgba(230,245,255,0.55)";
+  g.lineWidth = 1;
+  for (let k = 0; k < 18; k++) {
+    const a = (k / 18) * Math.PI * 2 + t * 0.2;
+    g.beginPath();
+    g.moveTo(ft.x + Math.cos(a) * 12, ft.y - 4 + Math.sin(a) * 12);
+    g.lineTo(ft.x + Math.cos(a) * 15, ft.y - 4 + Math.sin(a) * 15);
+    g.stroke();
+  }
+  g.strokeStyle = friend.color;
+  g.lineWidth = 5;
+  g.beginPath();
+  g.arc(ft.x, ft.y - 4, 19, angle - 0.6, angle + 0.6);
+  g.stroke();
+  const fade = Math.min(1, into * 8, (1 - into) * 8);
+  // The current speaker gets a small "talking" mark above their head
+  g.save();
+  g.globalAlpha = fade;
+  g.strokeStyle = friend.color;
+  g.lineWidth = 2;
+  [0, 1].forEach((k) => {
+    g.beginPath();
+    g.arc(friend.x, friend.y - 50, 5 + k * 5, Math.PI * 1.15, Math.PI * 1.85);
+    g.stroke();
+  });
+  g.restore();
+
+  // Order coaster: every so often it glows and buzzes, "order up"
+  const orderUp = (t % 7) < 2.6;
+  if (orderUp) {
+    const buzz = Math.sin(t * 40) * 1.2;
+    glowDisc(356 + buzz, 62, 34, "rgba(255,190,90,0.5)");
+    g.strokeStyle = "#ffd28a";
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.arc(356 + buzz, 62, 7, 0, Math.PI * 2);
+    g.stroke();
+  } else {
+    g.strokeStyle = "rgba(255,210,138,0.35)";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(356, 62, 7, 0, Math.PI * 2);
+    g.stroke();
+  }
+
+  // Rhythm wall: bars that move with the beat of the cafe's music
+  const rw = cafeRhythmWall;
+  const beat = 60 / 64;
+  const colors = ["#f7c26b", "#f29b6b", "#e8889a", "#b7a6f0", "#8fd3ff"];
+  for (let k = 0; k < 10; k++) {
+    const y = rw.y + 8 + k * 10.6;
+    const level = 0.35 + 0.65 * Math.abs(Math.sin((t / beat) * Math.PI + k * 0.7)) *
+      (0.6 + 0.4 * Math.sin(t * 1.3 + k));
+    const len = 4 + level * (rw.w - 10);
+    g.fillStyle = colors[k % colors.length];
+    roundRect(g, rw.x + rw.w - 4 - len, y, len, 6, 3);
+    g.fill();
+  }
+  glowDisc(rw.x, rw.y + rw.h / 2, 70, "rgba(232,136,154,0.18)");
+
+  // Quiet light: a calm green while the corner is quiet
+  const ql = cafeQuietLamp;
+  glowDisc(ql.x, ql.y - 40, 70, "rgba(127,209,139,0.35)");
+  g.beginPath();
+  g.arc(ql.x, ql.y - 40, 13, 0, Math.PI * 2);
+  g.fillStyle = "#9fe0a8";
+  g.fill();
+  ink(g, 1.8);
+  g.beginPath();
+  g.arc(ql.x, ql.y - 40, 5, 0, Math.PI * 2);
+  g.fillStyle = "#e9fff0";
+  g.fill();
+
+  // A soft pulsing marker on each one Alyssa can learn about
+  cafeTech.forEach((tech, i) => {
+    if (tech === cafeActiveTech) return;
+    const ph = (t * 0.8 + i * 0.25) % 1;
+    const mx = tech.id === "table" ? ft.x + ft.r - 6 : tech.id === "quiet" ? ql.x + 22 : tech.x;
+    const my = tech.id === "table" ? ft.y - ft.r + 6 : tech.id === "quiet" ? ql.y - 54 : tech.id === "rhythm" ? rw.y - 14 : tech.y - 22;
+    g.strokeStyle = `rgba(255,236,190,${0.8 * (1 - ph)})`;
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(mx, my, 5 + ph * 12, 0, Math.PI * 2);
+    g.stroke();
+    g.fillStyle = "rgba(255,236,190,0.95)";
+    g.beginPath();
+    g.arc(mx, my, 3.5, 0, Math.PI * 2);
+    g.fill();
+  });
+}
+
+// The words themselves, drawn last so no lantern hangs in front of them:
+// the friends' conversation, and "order up" when a coaster lights.
+function drawCafeCaptions(g, t) {
+  const ft = cafeFriendsTable;
+  const n = Math.floor(t / CAFE_LINE_SECONDS) % cafeConversation.length;
+  const into = (t % CAFE_LINE_SECONDS) / CAFE_LINE_SECONDS;
+  const [who, line] = cafeConversation[n];
+  const friend = cafeFriends[who];
+  drawSpeakerCaption(g, friend.name, friend.color, line, ft.x, ft.y + 34, Math.min(1, into * 8, (1 - into) * 8));
+  if (t % 7 < 2.6) {
+    drawCaption(g, "order up: oat latte", 356, 100, 11, Math.min(1, (t % 7) * 4, (2.6 - (t % 7)) * 4));
+  }
+}
+
+// A caption with the speaker's name in their colour, on a dark pill.
+function drawSpeakerCaption(g, name, color, text, x, y, alpha) {
+  g.save();
+  g.globalAlpha = alpha;
+  g.font = "700 12px Inter, sans-serif";
+  const nameW = g.measureText(name).width;
+  g.font = "600 12px Inter, sans-serif";
+  const textW = g.measureText(text).width;
+  const w = nameW + textW + 30, h = 24;
+  g.fillStyle = "rgba(20,14,16,0.9)";
+  roundRect(g, x - w / 2, y - h / 2, w, h, 9);
+  g.fill();
+  g.strokeStyle = color;
+  g.lineWidth = 1.5;
+  g.stroke();
+  g.textBaseline = "middle";
+  g.textAlign = "left";
+  g.font = "700 12px Inter, sans-serif";
+  g.fillStyle = color;
+  g.fillText(name, x - w / 2 + 11, y + 1);
+  g.font = "600 12px Inter, sans-serif";
+  g.fillStyle = "#ffffff";
+  g.fillText(text, x - w / 2 + 19 + nameW, y + 1);
+  g.restore();
 }
 
 function lightFlicker(t, i) {
@@ -3789,16 +4067,18 @@ function renderCafe(now) {
 
   drawCafeRoom(g);
   cafeChairs.forEach((c) => drawCafeChair(g, c));
+  drawCafeQuietLamp(g);
 
-  // Tables and people, drawn back-to-front so seated patrons tuck behind the table.
+  // Tables and people, drawn back-to-front so seated friends tuck behind the table.
   const player = alyssa;
   const drawables = [
-    { y: cafeTable.y + cafeTable.h / 2, draw: () => drawCafeTable(g) },
-    ...cafeRoundTables.map((rt) => ({ y: rt.y, draw: () => drawCafeRoundTable(g, rt) })),
-    ...cafePatrons.map((p, i) => ({
+    { y: cafeFriendsTable.y, draw: () => drawCafeFriendsTable(g) },
+    ...cafeRoundTables.map((rt) => ({ y: rt.y, draw: () => drawCafeRoundTable(g, rt, [[-20, 14]]) })),
+    ...cafeFriends.map((p, i) => ({
       y: p.y,
       draw: () => drawCharacter(g, p, p.x, p.y, 1.4, animPhase + i * 1.9, false),
     })),
+    ...cafeReaders.map((r, i) => ({ y: r.y, draw: () => drawCafeReader(g, r, i) })),
     { y: player.y, draw: () => drawCharacter(g, player, player.x, player.y, 1.4, animPhase, !!player.moving) },
     ...(jamieJoined
       ? [{ y: jamie.y, draw: () => drawCharacter(g, jamie, jamie.x, jamie.y, 1.4, animPhase + 0.7, !!jamie.moving) }]
@@ -3807,8 +4087,10 @@ function renderCafe(now) {
   drawables.sort((a, b) => a.y - b.y).forEach((d) => d.draw());
 
   drawCafeLighting(t);
+  drawCafeScreens(g, t);
   cafeCandles.forEach((c, i) => drawCafeCandle(g, c, t, i));
   cafeLanterns.forEach((l, i) => drawCafeLantern(g, l, t, i));
+  drawCafeCaptions(g, t);
 }
 
 /* ---------------------------------------------------------------------- */
