@@ -578,8 +578,32 @@ kbd {
 /* --- Render scene: placeholder for the wearable's industrial design rendering --- */
 
 .render-scene {
-  padding-inline: 16px;
+  padding: 96px 16px 24px;
+  justify-content: safe center; /* on short windows, never slide up under the question */
   background: radial-gradient(circle at 50% 55%, #fffaf0 0%, #efe4cf 75%);
+}
+
+/* The question the wearable asks, across the top of the page. */
+.render-question {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 340px);
+  margin: 0;
+  text-align: center;
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+/* Where the question wraps onto two lines, leave room for both. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  .render-scene { padding-top: 140px; }
 }
 
 .render-header {
@@ -603,7 +627,8 @@ kbd {
 }
 
 .render-placeholder {
-  width: min(640px, 100%);
+  width: min(640px, 100%, (100vh - 340px) * 1.6);
+  flex-shrink: 0;
   aspect-ratio: 16 / 10;
   display: flex;
   flex-direction: column;
@@ -634,6 +659,8 @@ kbd {
   .lab-header { top: 60px; }
   .lab-title { font-size: 24px; }
   .render-title { font-size: 28px; }
+  .render-scene { padding-top: 140px; }
+  .render-question { top: 64px; max-width: calc(100% - 32px); font-size: 28px; }
 }
 
 /* --- Quote bubbles: what people on the map say when Alyssa walks up --- */
