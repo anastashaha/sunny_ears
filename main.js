@@ -1,164 +1,147 @@
 "use strict";
 
 /* ---------------------------------------------------------------------- */
-/* World setup: a 2 x 2 grid of city blocks                               */
+/* World setup: a seaside village, after Carmel-by-the-Sea                */
 /*                                                                        */
-/*   x-axis (left -> right):  Repair  ->  Augmentation                    */
-/*   y-axis (top -> bottom):  Product ->  Environment                     */
+/* The ocean runs along the top, then a strip of beach, then the village, */
+/* with one cobblestone path zig-zagging through it in a Z:               */
 /*                                                                        */
-/* The two axes are the streets that cross the map; where they meet is    */
-/* the crossroads.                                                        */
+/*   1st stretch (left -> right):  Repair     -> Augmentation             */
+/*   2nd stretch (right -> left):  Sound      -> Context                  */
+/*   3rd stretch (left -> right):  Individual -> Community & Environment  */
+/*                                                                        */
+/* Alyssa starts on the beach and follows the path down to Cafe Lumen.    */
 /* ---------------------------------------------------------------------- */
 
 // The map's height is fixed; its width follows the window's shape so the
 // overview fills the whole page (see layoutWorld).
 const WORLD = { width: 2000, height: 1500 };
-const ORIGIN = { x: WORLD.width / 2, y: WORLD.height / 2 };
-const STREET = 140; // width of each axis street
-const EDGE = 70; // margin between the blocks and the edge of the map
-const MIN_ASPECT = 1.15; // narrower than this and the buildings stop fitting in a block
+const MIN_ASPECT = 1.15; // narrower than this and the shops stop fitting along the path
+const SEA = 118; // where the waves wash up
+const SAND = 212; // where the beach gives way to grass
+const PATH_HALF = 56; // half the width of the cobblestone path
+const PATH_INSET = 220; // how far the path's corners sit in from the sides of the map
+const PATH_ROWS = [470, 1220]; // the y of the first and last stretches
 
-// Light blues and oranges.
 // Storybook palette: soft greens, warm wood and cream, all outlined in ink.
 const INK = "#3e3226";
 const COLORS = {
   ink: INK,
   grass: "#95c46a",
   curb: "#e8dcc6",
+  sand: "#f0dfb8",
 };
 
-// One block per quadrant. `col` 0/1 = repair/augmentation, `row` 0/1 = product/environment.
-// Building positions are relative to the block's top-left corner.
-const QUADRANTS = [
+// The three stretches of the Z, in the order Alyssa walks them. Each runs
+// from `a` to `b` (set in layoutWorld); its two ends are named on street signs.
+const LEGS = [
+  { id: "repairAugmentation", from: "Repair", to: "Augmentation", kicker: "First stretch", accent: "#c9793a" },
+  { id: "soundContext", from: "Sound", to: "Context", kicker: "Second stretch", accent: "#5b8fa8" },
+  { id: "individualCommunity", from: "Individual", to: "Community & Environment", kicker: "Last stretch", accent: "#5f8a3c" },
+];
+LEGS.forEach((leg) => (leg.name = `${leg.from} → ${leg.to}`));
+
+const SHORE = { id: "shore", name: "The Shore", kicker: "Carmel-by-the-Sea", accent: "#5b8fa8" };
+
+// The whole route as a polyline: down from the beach, then the three stretches.
+const ROUTE = [];
+
+// Shops along the path. Each sits on the uphill side of its stretch (`leg`),
+// centred `at` that far along it, with its front walk running down to the path.
+const buildings = [
+  // First stretch: Repair -> Augmentation
   {
-    id: "statusQuo",
-    name: "Status Quo",
-    col: 0, row: 0,
-    ground: "#b7d892", accent: "#5f8a3c", fence: ["top", "left"],
-    buildings: [],
+    leg: 0, at: 0.3, w: 180, h: 118, wall: "#f6e7cf", roof: "#8a6a9c", trim: "#fbf3e6", windows: 2,
+    chimney: true, flowerBoxes: true, door: true, doorColor: "#5b8fa8",
   },
   {
-    id: "superpower",
-    name: "Superpower",
-    col: 1, row: 0,
-    ground: "#c4dd8c", accent: "#c0702c", fence: ["top", "right"],
-    buildings: [
-      {
-        name: "Wearables Lab", x: 260, y: 230, w: 340, h: 190,
-        style: "future", glow: "#4fd8e0", display: "gadgets",
-        door: true, enter: "lab", enterLabel: "enter the Wearables Lab",
-      },
-      {
-        // Bottom-left corner of the block, facing the street toward A World Built for Me.
-        name: "Subtitles for the World", x: 40, y: 450, w: 210, h: 118, anchor: "left",
-        style: "future", glow: "#a98bf5", display: "captions",
-        door: true, enter: "subtitles", enterLabel: "enter Subtitles for the World",
-      },
-    ],
+    leg: 0, at: 0.52, w: 170, h: 112, wall: "#fdf3e1", roof: "#b85c3c", trim: "#fff6ea", windows: 2,
+    awning: true, door: true, doorColor: "#7a4a36",
   },
   {
-    id: "changingMyWorld",
-    name: "Changing My World",
-    col: 0, row: 1,
-    ground: "#a9d18a", accent: "#7f8f2e", fence: ["bottom", "left"],
-    buildings: [],
+    name: "Wearables Lab", leg: 0, at: 0.74, w: 300, h: 150,
+    style: "future", glow: "#4fd8e0", display: "gadgets",
+    door: true, enter: "lab", enterLabel: "enter the Wearables Lab",
+  },
+  // Second stretch: Sound -> Context
+  {
+    leg: 1, at: 0.5, w: 180, h: 116, wall: "#e9eef0", roof: "#5f7f8f", trim: "#f6fafb", windows: 2,
+    chimney: true, flowerBoxes: true, door: true, doorColor: "#c9793a",
   },
   {
-    id: "worldBuiltForMe",
-    name: "A World Built for Me",
-    col: 1, row: 1,
-    ground: "#9ecf95", accent: "#3f7f6a", fence: ["bottom", "right"],
-    buildings: [
-      {
-        name: "Cafe Lumen", x: 260, y: 230, w: 340, h: 190,
-        wall: "#f6dcc0", roof: "#b85c3c", trim: "#fff4e8", windows: 4, awning: true,
-        windowColor: "#ffe2b0", door: true, enter: "cafe", enterLabel: "enter Cafe Lumen",
-      },
-    ],
+    name: "Subtitles for the World", leg: 1, at: 0.8, w: 210, h: 118,
+    style: "future", glow: "#a98bf5", display: "captions",
+    door: true, enter: "subtitles", enterLabel: "enter Subtitles for the World",
+  },
+  // Last stretch: Individual -> Community & Environment
+  {
+    leg: 2, at: 0.55, w: 170, h: 116, wall: "#f4e2c4", roof: "#6f8f4a", trim: "#fbf2e3", windows: 2,
+    chimney: true, flowerBoxes: true, door: true, doorColor: "#b85c3c",
+  },
+  {
+    name: "Cafe Lumen", leg: 2, at: 0.84, w: 340, h: 190,
+    wall: "#f6dcc0", roof: "#b85c3c", trim: "#fff4e8", windows: 4, awning: true, flowerBoxes: true,
+    windowColor: "#ffe2b0", door: true, enter: "cafe", enterLabel: "enter Cafe Lumen",
   },
 ];
 
-const TOWN_SQUARE = {
-  id: "townSquare",
-  name: "The Crossroads",
-};
-
-QUADRANTS.forEach((q) => {
-  q.axes = `${q.row ? "Environment" : "Product"} · ${q.col ? "Augmentation" : "Repair"}`;
-});
-
-// Buildings in world coordinates: simple boxes Alyssa can't walk through.
-// Their `x` in QUADRANTS is laid out for an 860px-wide block, so they're
-// kept centered as the block stretches, unless anchored to the block's left edge.
-const buildings = QUADRANTS.flatMap((q) =>
-  q.buildings.map((b) => ({
-    ...b,
-    quadrant: q,
-    offsetX: b.anchor === "left" ? b.x : b.x - 430,
-    offsetY: b.y,
-  }))
-);
-
 /* ---------------------------------------------------------------------- */
 /* People: residents of the map, each with a quote from our research.     */
-/* They're scattered at random within their region on every visit, and    */
-/* share their quote in a speech bubble when Alyssa walks up to them.     */
-/*                                                                        */
-/* Regions: a quadrant id, or one of the streets between two quadrants:   */
-/*   "productStreet"      between Status Quo and Superpower               */
-/*   "augmentationStreet" between Superpower and A World Built for Me     */
+/* They're scattered at random along their stretch of the path on every   */
+/* visit, and share their quote in a speech bubble when Alyssa walks up.  */
+/* `region` is the id of a stretch in LEGS.                               */
 /* ---------------------------------------------------------------------- */
 
 const people = [
   {
     name: null, // TBD
-    region: "superpower",
+    region: "repairAugmentation",
     quote: "hearing better isn't actually hearing louder",
     palette: { skin: "#f1c9a5", hair: "#c7732f", hairStyle: "short", outfit: "#4f86b8", outfitTrim: "#e3eff8" },
   },
   {
     name: "Nathan",
-    region: "statusQuo",
+    region: "individualCommunity",
     quote:
       "at some point my friends started getting earplugs, it became normalized, and i ended up buying them too. the main driver for that was the social influence and not the ‘i care about my hearing’",
     palette: { skin: "#e8b98a", hair: "#3c2f22", hairStyle: "short", outfit: "#6b7f94", outfitTrim: "#dde9f4" },
   },
   {
     name: null, // TBD
-    region: "productStreet",
+    region: "soundContext",
     quote: "wearing airpods makes me feel closed to the world",
     palette: { skin: "#8d5a3b", hair: "#1d1713", hairStyle: "short", outfit: "#f2b36b", outfitTrim: "#fff4e8" },
   },
   {
     name: "Michael",
-    region: "augmentationStreet",
+    region: "soundContext",
     quote: "we don't hear sound, we hear meaning",
     palette: { skin: "#d9a27a", hair: "#2b2320", hairStyle: "short", outfit: "#23384d", outfitTrim: "#c6dbea" },
   },
   {
     name: "Laura",
-    region: "productStreet",
+    region: "individualCommunity",
     quote:
       "Loop made themselves so popular... it became an accessory, like jewelry... you're cool if you're wearing loops.",
     palette: { skin: "#f2d0b0", hair: "#b5793f", hairStyle: "medium", outfit: "#e07a2f", outfitTrim: "#fde2c6" },
   },
   {
     name: "Megan",
-    region: "statusQuo",
+    region: "repairAugmentation",
     quote:
       "When your eyes go bad... you put readers on to read... whereas when your hearing goes, it has much more to do with your brain than with your ears... you have to wear them even when you're sitting at home reading a book, or else your brain doesn't get used to them.",
     palette: { skin: "#f0c9a4", hair: "#a8a29a", hairStyle: "medium", outfit: "#8fc1e3", outfitTrim: "#f4f8fb" },
   },
   {
     name: "Josephine",
-    region: "superpower",
+    region: "repairAugmentation",
     quote:
       "If you're in your 40s, you're like, ‘I'm not 70, I'm not ready for that’. And when I was told I needed them, I was very honest. I was like, is there anything else? Can I wait?",
     palette: { skin: "#c98a55", hair: "#241c15", hairStyle: "short", outfit: "#c95f1f", outfitTrim: "#fbd7b5" },
   },
   {
     name: "Arya",
-    region: "worldBuiltForMe",
+    region: "individualCommunity",
     // Placeholder quote, not from research: replace before sharing.
     quote:
       "if there was a cool place to hangout on a friday night that was made to be easy on the ears, i'd go there all the time",
@@ -168,21 +151,130 @@ const people = [
 people.forEach((p) => (p.facing = "down"));
 
 const QUOTE_REACH = 80; // how close Alyssa gets before a quote pops up
-const PERSON_SPACING = 130; // minimum distance between people in the same region
+const PERSON_SPACING = 130; // minimum distance between people on the same stretch
 
-// Maps a person's random (u, v) in 0..1 to a spot in their region, so they
-// keep their place when the map stretches with the window.
+/* Path geometry ---------------------------------------------------------- */
+
+function legPoint(leg, t) {
+  return { x: leg.a.x + (leg.b.x - leg.a.x) * t, y: leg.a.y + (leg.b.y - leg.a.y) * t };
+}
+
+// The y of a stretch's centre line at a given x.
+function legY(leg, x) {
+  return legPoint(leg, (x - leg.a.x) / (leg.b.x - leg.a.x)).y;
+}
+
+// How far the path's edge sits above its centre line, measured straight up
+// (more than PATH_HALF on the sloping middle stretch).
+function legHalfHeight(leg) {
+  const dx = leg.b.x - leg.a.x, dy = leg.b.y - leg.a.y;
+  return (PATH_HALF * Math.hypot(dx, dy)) / Math.abs(dx);
+}
+
+// Unit vector pointing away from a stretch on its uphill (seaward) side.
+function legNormal(leg) {
+  const dx = leg.b.x - leg.a.x, dy = leg.b.y - leg.a.y;
+  const len = Math.hypot(dx, dy);
+  const n = { x: dy / len, y: -dx / len };
+  return n.y > 0 ? { x: -n.x, y: -n.y } : n;
+}
+
+// A spot beside a stretch, `t` of the way along it: `side` 1 is uphill,
+// -1 downhill, `gap` past the path's edge.
+function besidePath(leg, t, side, gap) {
+  const p = legPoint(leg, t);
+  const n = legNormal(leg);
+  const off = side * (PATH_HALF + gap);
+  return { x: p.x + n.x * off, y: p.y + n.y * off };
+}
+
+function distToSegment(x, y, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const t = clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy), 0, 1);
+  return Math.hypot(x - (a.x + dx * t), y - (a.y + dy * t));
+}
+
+function distToRoute(x, y) {
+  let d = Infinity;
+  for (let i = 1; i < ROUTE.length; i++) d = Math.min(d, distToSegment(x, y, ROUTE[i - 1], ROUTE[i]));
+  return d;
+}
+
+// The wavy lines where the waves wash up, and where the sand meets the grass.
+function shoreY(x) {
+  return SEA + Math.sin(x / 140) * 10 + Math.sin(x / 57 + 1) * 4;
+}
+function sandY(x) {
+  return SAND + Math.sin(x / 190 + 2) * 12;
+}
+
+// Maps a person's random (u, v) in 0..1 to a spot just off the path along
+// their stretch, so they keep their place when the map stretches with the window.
 function regionPoint(region, u, v) {
-  if (region === "productStreet") {
-    const top = EDGE + 200, bottom = ORIGIN.y - STREET / 2 - 40;
-    return { x: ORIGIN.x + (u < 0.5 ? -50 : 50), y: top + v * (bottom - top) };
+  const leg = LEGS.find((l) => l.id === region);
+  return besidePath(leg, 0.18 + u * 0.64, v < 0.5 ? 1 : -1, 26);
+}
+
+/* Street signs, lamp posts and greenery ---------------------------------- */
+
+// The names at each end of each stretch, on street signs beside the path.
+function streetSigns() {
+  const [first, second, last] = LEGS;
+  const span = WORLD.width - 2 * PATH_INSET;
+  return [
+    { text: first.from, ...besidePath(first, 130 / span, 1, 10) },
+    { text: first.to, ...besidePath(first, 1 - 90 / span, 1, 10) },
+    { text: second.from, ...besidePath(second, 0.14, -1, 70) },
+    { text: second.to, ...besidePath(second, 0.93, 1, 10) },
+    { text: last.from, ...besidePath(last, 110 / span, -1, 70) },
+    { text: last.to, ...besidePath(last, 1 - 170 / span, -1, 70) },
+  ];
+}
+
+const lamps = [];
+const decor = []; // cypress trees, bushes and flower beds, sorted back to front
+
+// Lamp posts along the path, and greenery scattered over the open grass,
+// kept clear of the path, the shops and the signs. Seeded, so the village
+// looks the same on every visit.
+function layoutDecor() {
+  const signs = streetSigns();
+  const nearShop = (x, y, pad) =>
+    buildings.some((b) => x > b.x - pad && x < b.x + b.w + pad && y > b.y - pad && y < b.y + b.h + pad + 20);
+
+  lamps.length = 0;
+  LEGS.forEach((leg, i) => {
+    const len = Math.hypot(leg.b.x - leg.a.x, leg.b.y - leg.a.y);
+    let side = i % 2 ? -1 : 1;
+    for (let d = 150; d < len - 120; d += 260, side = -side) {
+      const lamp = besidePath(leg, d / len, side, 16);
+      if (signs.some((s) => Math.hypot(s.x - lamp.x, s.y - lamp.y) < 120)) continue;
+      if (lamps.some((l) => Math.hypot(l.x - lamp.x, l.y - lamp.y) < 160)) continue;
+      if (nearShop(lamp.x, lamp.y, 30)) continue;
+      lamps.push(lamp);
+    }
+  });
+
+  decor.length = 0;
+  let seed = 3;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const STEP = 150;
+  for (let gy = SAND + 60; gy < WORLD.height; gy += STEP * 0.8) {
+    for (let gx = 50; gx < WORLD.width - 30; gx += STEP) {
+      const x = gx + (rand() - 0.5) * STEP * 0.6;
+      const y = gy + (rand() - 0.5) * STEP * 0.5;
+      const kind = rand();
+      const s = Math.floor(rand() * 1000);
+      if (rand() < 0.3) continue; // leave some open meadow
+      const type = kind < 0.38 ? "cypress" : kind < 0.75 ? "bush" : "flowers";
+      if (y < sandY(x) + 50 || y > WORLD.height - 24) continue;
+      if (distToRoute(x, y) < PATH_HALF + (type === "cypress" ? 100 : 55)) continue;
+      if (nearShop(x, y, 60)) continue;
+      if ([...signs, ...lamps].some((o) => Math.hypot(o.x - x, o.y - y) < 90)) continue;
+      decor.push({ type, x, y, seed: s });
+    }
   }
-  if (region === "augmentationStreet") {
-    const left = ORIGIN.x + STREET / 2 + 60, right = WORLD.width - EDGE - 560;
-    return { x: left + u * (right - left), y: ORIGIN.y + (v < 0.5 ? -50 : 50) };
-  }
-  const b = QUADRANTS.find((q) => q.id === region).block;
-  return { x: b.x + 70 + u * (b.w - 140), y: b.y + 210 + v * (b.h - 260) };
+  decor.sort((a, b) => a.y - b.y);
 }
 
 // Collision boxes for everything on the map, rebuilt whenever it's laid out.
@@ -190,8 +282,12 @@ const worldObstacles = [];
 
 function rebuildWorldObstacles() {
   worldObstacles.length = 0;
+  worldObstacles.push({ x: 0, y: 0, w: WORLD.width, h: SEA + 10 }); // the sea
   worldObstacles.push(...buildings);
-  signposts().forEach((sign) => worldObstacles.push({ x: sign.x - 7, y: sign.y - 6, w: 14, h: 10 }));
+  [...streetSigns(), ...lamps].forEach((p) => worldObstacles.push({ x: p.x - 6, y: p.y - 6, w: 12, h: 10 }));
+  decor.forEach((d) => {
+    if (d.type === "cypress") worldObstacles.push({ x: d.x - 9, y: d.y - 8, w: 18, h: 12 });
+  });
   people.forEach((p) => {
     if (p.u !== undefined) worldObstacles.push({ x: p.x - 12, y: p.y - 8, w: 24, h: 22 });
   });
@@ -199,23 +295,32 @@ function rebuildWorldObstacles() {
 
 function layoutWorld(aspect) {
   WORLD.width = Math.round(WORLD.height * Math.max(aspect, MIN_ASPECT));
-  ORIGIN.x = WORLD.width / 2;
-  ORIGIN.y = WORLD.height / 2;
-  const w = ORIGIN.x - STREET / 2 - EDGE;
-  const h = ORIGIN.y - STREET / 2 - EDGE;
-  QUADRANTS.forEach((q) => {
-    q.block = {
-      x: q.col ? ORIGIN.x + STREET / 2 : EDGE,
-      y: q.row ? ORIGIN.y + STREET / 2 : EDGE,
-      w,
-      h,
-    };
+  const left = PATH_INSET, right = WORLD.width - PATH_INSET;
+  const [top, bottom] = PATH_ROWS;
+  ROUTE.length = 0;
+  ROUTE.push(
+    { x: left, y: SAND - 6 },
+    { x: left, y: top },
+    { x: right, y: top },
+    { x: left, y: bottom },
+    { x: right, y: bottom }
+  );
+  LEGS.forEach((leg, i) => {
+    leg.a = ROUTE[i + 1];
+    leg.b = ROUTE[i + 2];
   });
+
   buildings.forEach((b) => {
-    const block = b.quadrant.block;
-    b.x = (b.anchor === "left" ? block.x : block.x + block.w / 2) + b.offsetX;
-    b.y = b.quadrant.block.y + b.offsetY;
+    const leg = LEGS[b.leg];
+    const cx = legPoint(leg, b.at).x;
+    b.x = cx - b.w / 2;
+    // Stand just uphill of the path; on the slope, clear of wherever it rises highest.
+    const edge = Math.min(legY(leg, b.x), legY(leg, b.x + b.w)) - legHalfHeight(leg);
+    b.y = edge - 14 - b.h;
+    b.pathY = legY(leg, cx); // where its front walk meets the path
   });
+
+  layoutDecor();
   people.forEach((p) => {
     if (p.u !== undefined) Object.assign(p, regionPoint(p.region, p.u, p.v));
   });
@@ -229,12 +334,11 @@ const cafeBuilding = buildings.find((b) => b.enter === "cafe");
 /* Alyssa: the one character we follow through the map                    */
 /* ---------------------------------------------------------------------- */
 
-const statusQuo = QUADRANTS.find((q) => q.id === "statusQuo");
-
+// She starts on the beach, at the top of the path.
 const alyssa = {
   name: "Alyssa",
-  x: statusQuo.block.x + statusQuo.block.w / 2,
-  y: statusQuo.block.y + statusQuo.block.h / 2 + 40,
+  x: ROUTE[0].x,
+  y: SEA + 52,
   facing: "down",
   palette: {
     skin: "#e3b48f",
@@ -254,6 +358,12 @@ function scatterPeople() {
   const placed = [];
   const clearOfBuildings = (x, y) =>
     !buildings.some((b) => x > b.x - 60 && x < b.x + b.w + 60 && y > b.y - 60 && y < b.y + b.h + 100);
+  // Keep well clear of street signs, so nobody stands in front of a name.
+  const signs = streetSigns();
+  const props = [...lamps, ...decor.filter((d) => d.type === "cypress")];
+  const clearOfProps = (x, y) =>
+    signs.every((o) => Math.hypot(x - o.x, y - o.y) > 130) &&
+    props.every((o) => Math.hypot(x - o.x, y - o.y) > 50);
   people.forEach((p) => {
     let best = null;
     for (let attempt = 0; attempt < 300; attempt++) {
@@ -261,6 +371,7 @@ function scatterPeople() {
       const pt = regionPoint(p.region, u, v);
       const ok =
         clearOfBuildings(pt.x, pt.y) &&
+        clearOfProps(pt.x, pt.y) &&
         Math.hypot(pt.x - alyssa.x, pt.y - alyssa.y) > 120 &&
         placed.every((o) => Math.hypot(pt.x - o.x, pt.y - o.y) > PERSON_SPACING);
       best = { u, v, ...pt };
@@ -330,7 +441,7 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-// Zoom: the page opens on an overview of all four quadrants filling the
+// Zoom: the page opens on an overview of the whole village filling the
 // window (`fitZoom`), and can zoom in to follow Alyssa up close.
 const FOLLOW_ZOOM = 1;
 const MAX_ZOOM = 1.6;
@@ -390,7 +501,7 @@ function updateCamera(dt) {
   const inOverview = wantOverview || targetZoom <= fit * 1.05;
   if (inOverview !== zoomToggleShowsOverview) {
     zoomToggleShowsOverview = inOverview;
-    zoomToggleEl.textContent = inOverview ? "Zoom in on Alyssa" : "View all quadrants";
+    zoomToggleEl.textContent = inOverview ? "Zoom in on Alyssa" : "View the whole map";
   }
 }
 
@@ -641,6 +752,21 @@ function drawBuilding(g, b) {
   g.lineWidth = 2.5;
   g.stroke();
 
+  // A stone chimney poking up through the roof
+  if (b.chimney) {
+    const cx = x + w * 0.72;
+    g.strokeStyle = INK;
+    g.lineWidth = 2;
+    g.fillStyle = "#b9a58c";
+    roundRect(g, cx - 9, y - 44, 18, 40, 2);
+    g.fill();
+    g.stroke();
+    g.fillStyle = "#8f7b63";
+    roundRect(g, cx - 12, y - 49, 24, 7, 2);
+    g.fill();
+    g.stroke();
+  }
+
   // Pitched roof with rows of scalloped shingles
   const roof = () => {
     g.beginPath();
@@ -726,6 +852,30 @@ function drawBuilding(g, b) {
   const winY = y + h - winH - 18;
   for (let i = 0; i < cols; i++) frame(x + gap + i * (winW + gap), winY, winW, winH, false);
 
+  // Window boxes spilling over with flowers
+  if (b.flowerBoxes) {
+    const blooms = ["#e8889a", "#f2cf5b", "#a58ad0", "#e0664f"];
+    for (let i = 0; i < cols; i++) {
+      const fx = x + gap + i * (winW + gap);
+      g.fillStyle = "#5e8f3e";
+      g.beginPath();
+      g.ellipse(fx + winW / 2, winY + winH - 1, winW / 2 + 2, 5, 0, 0, Math.PI * 2);
+      g.fill();
+      for (let f = 0; f < 4; f++) {
+        g.fillStyle = blooms[(i + f) % blooms.length];
+        g.beginPath();
+        g.arc(fx + 3 + f * ((winW - 6) / 3), winY + winH - 3 + (f % 2) * 2, 3, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = "#9a653b";
+      roundRect(g, fx - 3, winY + winH + 1, winW + 6, 7, 2);
+      g.fill();
+      g.strokeStyle = INK;
+      g.lineWidth = 1.5;
+      g.stroke();
+    }
+  }
+
   // Striped, scalloped awning over the shop front
   if (b.awning) {
     const ay = winY - 26, ah = 18;
@@ -798,6 +948,7 @@ function drawBuilding(g, b) {
 }
 
 function drawBuildingName(g, b) {
+  if (!b.name) return;
   const { x, y, w, h } = b;
   const k = labelScale(2.4, 0.9);
   g.font = `700 ${13 * k}px Inter, sans-serif`;
@@ -865,7 +1016,7 @@ function drawFutureStore(g, b) {
 
   // Upper floor: a ribbed slate band with a light strip running through it
   const bandTop = y + 14;
-  const bandH = h >= 160 ? 44 : 0;
+  const bandH = h >= 140 ? 44 : 0;
   if (bandH) {
     g.fillStyle = "#34404c";
     roundRect(g, x + 14, bandTop, w - 28, bandH, 10);
@@ -1100,129 +1251,281 @@ function stepCharacter(ch, dt, speed, obstacles, bounds) {
 }
 
 function drawGround(g) {
-  // One continuous cobblestone town: streets, squares and edges alike.
-  g.fillStyle = cobblePattern(g);
+  // Grass everywhere, the beach and the sea along the top, then the path.
+  g.fillStyle = grassPattern(g);
   g.fillRect(0, 0, WORLD.width, WORLD.height);
-
-  // The four blocks are cozy grass patches, edged with a stone curb.
-  QUADRANTS.forEach((q) => {
-    const b = q.block;
-    g.fillStyle = "rgba(90,64,38,0.16)";
-    roundRect(g, b.x + 2, b.y + 6, b.w, b.h, 26);
-    g.fill();
-    g.fillStyle = COLORS.curb;
-    roundRect(g, b.x, b.y, b.w, b.h, 26);
-    g.fill();
-    g.strokeStyle = INK;
-    g.lineWidth = 2.5;
-    g.stroke();
-    g.fillStyle = grassPattern(g);
-    roundRect(g, b.x + 11, b.y + 11, b.w - 22, b.h - 22, 18);
-    g.fill();
-    g.strokeStyle = "rgba(62,50,38,0.6)";
-    g.lineWidth = 1.5;
-    g.stroke();
-
-    drawBlockGarden(g, q);
-  });
-
+  drawShore(g);
   buildings.forEach((b) => drawDoorPath(g, b));
+  drawPath(g);
 }
 
-// A pale stone path from each shop door out to the nearest street: straight
-// down for the top row, and down then across for the bottom row.
+// Traces a wavy line across the map, left to right (or right to left).
+function traceEdge(g, edgeY, reverse = false) {
+  const W = WORLD.width;
+  for (let i = 0; i <= W; i += 20) {
+    const x = reverse ? W - i : i;
+    g.lineTo(x, edgeY(x));
+  }
+}
+
+// The beach and the sea: waves washing in and out, foam, and a few rocks.
+function drawShore(g) {
+  const W = WORLD.width;
+  const t = animPhase;
+
+  // Sand, with a soft grassy edge
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.lineTo(W, 0);
+  traceEdge(g, sandY, true);
+  g.closePath();
+  g.fillStyle = sandPattern(g);
+  g.fill();
+  g.beginPath();
+  traceEdge(g, sandY);
+  g.strokeStyle = "rgba(94,143,62,0.6)";
+  g.lineWidth = 4;
+  g.stroke();
+
+  // Wet sand the waves have just left
+  const surge = Math.sin(t * 1.1) * 6;
+  const sea = (x) => shoreY(x) + surge;
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.lineTo(W, 0);
+  traceEdge(g, (x) => shoreY(x) + 14, true);
+  g.closePath();
+  g.fillStyle = "rgba(196,170,124,0.35)";
+  g.fill();
+
+  // The sea
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.lineTo(W, 0);
+  traceEdge(g, sea, true);
+  g.closePath();
+  const water = g.createLinearGradient(0, 0, 0, SEA + 16);
+  water.addColorStop(0, "#3d7fa6");
+  water.addColorStop(0.6, "#5aa6c4");
+  water.addColorStop(1, "#86cbd9");
+  g.fillStyle = water;
+  g.fill();
+
+  // Rocks out in the water, with foam around their feet
+  [[0.08, 58, 26], [0.11, 80, 14], [0.63, 44, 30], [0.67, 70, 18], [0.9, 62, 22]].forEach(([fx, ry, r], i) => {
+    const rx = fx * W;
+    g.fillStyle = "rgba(255,255,255,0.55)";
+    g.beginPath();
+    g.ellipse(rx, ry + r * 0.45, r * 1.3 + Math.sin(t * 2 + i) * 2, r * 0.4, 0, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.moveTo(rx - r, ry + r * 0.4);
+    g.quadraticCurveTo(rx - r * 0.9, ry - r * 0.6, rx - r * 0.1, ry - r * 0.7);
+    g.quadraticCurveTo(rx + r * 0.9, ry - r * 0.5, rx + r, ry + r * 0.4);
+    g.closePath();
+    g.fillStyle = "#8d8a84";
+    g.fill();
+    g.strokeStyle = INK;
+    g.lineWidth = 2;
+    g.stroke();
+    g.fillStyle = "rgba(255,255,255,0.22)";
+    g.beginPath();
+    g.ellipse(rx - r * 0.3, ry - r * 0.3, r * 0.35, r * 0.15, -0.3, 0, Math.PI * 2);
+    g.fill();
+  });
+
+  // Little ripples drifting along the water
+  g.strokeStyle = "rgba(255,255,255,0.55)";
+  g.lineWidth = 2;
+  g.lineCap = "round";
+  for (let i = 0; i * 150 < W + 150; i++) {
+    const x = ((i * 150 + t * 14) % (W + 150)) - 75;
+    const y = 28 + ((i * 37) % 54) + Math.sin(t * 1.5 + i) * 3;
+    g.beginPath();
+    g.moveTo(x - 14, y);
+    g.quadraticCurveTo(x - 7, y - 5, x, y);
+    g.quadraticCurveTo(x + 7, y + 5, x + 14, y);
+    g.stroke();
+  }
+
+  // Foam: a bright line where the wave breaks, and a fainter one behind it
+  g.lineJoin = "round";
+  g.beginPath();
+  traceEdge(g, (x) => sea(x) - 12 + Math.sin(x / 40 + t * 2) * 2);
+  g.strokeStyle = "rgba(255,255,255,0.35)";
+  g.lineWidth = 3;
+  g.stroke();
+  g.beginPath();
+  traceEdge(g, sea);
+  g.strokeStyle = "rgba(255,255,255,0.92)";
+  g.lineWidth = 6;
+  g.stroke();
+}
+
+// Traces the path: down from the beach, then along the Z.
+function traceRoute(g) {
+  g.beginPath();
+  ROUTE.forEach((p, i) => (i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)));
+}
+
+// The cobblestone path, edged with a pale stone curb.
+function drawPath(g) {
+  g.lineJoin = "round";
+  g.lineCap = "round";
+  g.save();
+  g.translate(2, 6);
+  traceRoute(g);
+  g.strokeStyle = "rgba(90,64,38,0.16)";
+  g.lineWidth = PATH_HALF * 2 + 6;
+  g.stroke();
+  g.restore();
+  traceRoute(g);
+  g.strokeStyle = INK;
+  g.lineWidth = PATH_HALF * 2 + 5;
+  g.stroke();
+  g.strokeStyle = COLORS.curb;
+  g.lineWidth = PATH_HALF * 2;
+  g.stroke();
+  g.strokeStyle = cobblePattern(g);
+  g.lineWidth = PATH_HALF * 2 - 16;
+  g.stroke();
+}
+
+// A pale stone front walk from each shop door down to the path.
 function drawDoorPath(g, b) {
   if (!b.door) return;
-  const block = b.quadrant.block;
   const door = doorOf(b);
   g.beginPath();
   g.moveTo(door.x, door.y);
-  if (b.quadrant.row === 0) {
-    g.lineTo(door.x, block.y + block.h);
-  } else {
-    const turnY = Math.min(door.y + 50, block.y + block.h - 40);
-    const edgeX = b.quadrant.col ? block.x : block.x + block.w;
-    g.lineTo(door.x, turnY - 20);
-    g.quadraticCurveTo(door.x, turnY, door.x + (edgeX < door.x ? -20 : 20), turnY);
-    g.lineTo(edgeX, turnY);
-  }
-  g.lineCap = "round";
-  g.lineJoin = "round";
+  g.lineTo(door.x, b.pathY);
+  g.lineCap = "butt";
   g.strokeStyle = INK;
   g.lineWidth = 38;
   g.stroke();
   g.strokeStyle = "#ecdfc7";
   g.lineWidth = 34;
   g.stroke();
-  g.strokeStyle = "rgba(160,130,95,0.35)";
-  g.lineWidth = 1.2;
-  g.setLineDash([3, 9]);
-  g.stroke();
-  g.setLineDash([]);
 }
 
-// Fences along the town's outer edges, and flowers and bushes in the corners,
-// kept to the edges so the middle of each patch stays clear.
-function drawBlockGarden(g, q) {
-  const b = q.block;
-  const inset = 26;
-  const left = b.x + inset, right = b.x + b.w - inset;
-  const top = b.y + inset, bottom = b.y + b.h - inset;
-
-  q.fence.forEach((side) => {
-    if (side === "top") drawFence(g, left + 30, top, right - 30, top);
-    if (side === "bottom") drawFence(g, left + 30, bottom, right - 30, bottom);
-    if (side === "left") drawFence(g, left, top + 30, left, bottom - 30);
-    if (side === "right") drawFence(g, right, top + 30, right, bottom - 30);
+// Trees, bushes, flower beds and lamp posts.
+function drawDecor(g) {
+  decor.forEach((d) => {
+    if (d.type === "cypress") drawCypress(g, d.x, d.y, d.seed);
+    else if (d.type === "bush") drawBush(g, d.x, d.y, d.seed);
+    else drawFlowerBed(g, d.x, d.y, d.seed);
   });
-
-  // Flower bed in the outer corner, bushes in the other two away from the plaque
-  const outerX = q.fence.includes("left") ? left + 70 : right - 70;
-  const innerX = q.fence.includes("left") ? right - 60 : left + 60;
-  const outerY = q.fence.includes("top") ? top + 150 : bottom - 60;
-  const otherY = q.fence.includes("top") ? bottom - 50 : top + 150;
-  drawFlowerBed(g, outerX, outerY, q.id.length);
-  drawBush(g, outerX, otherY, q.id.length + 1);
-  drawBush(g, innerX, outerY, q.id.length + 2);
+  lamps.forEach((l) => drawLamp(g, l.x, l.y));
 }
 
-function drawFence(g, x1, y1, x2, y2) {
-  const len = Math.hypot(x2 - x1, y2 - y1);
-  const posts = Math.max(2, Math.round(len / 34));
-  const horizontal = y1 === y2;
+// A Monterey cypress: a short, twisting trunk under dense, layered clouds
+// of dark needles, leaning with the wind off the sea.
+function drawCypress(g, x, y, seed) {
+  const lean = (seed % 2 ? 1 : -1) * (6 + (seed % 5) * 2);
+  const s = 0.9 + (seed % 4) * 0.08;
+  g.fillStyle = "rgba(60,40,20,0.2)";
+  g.beginPath();
+  g.ellipse(x + 6, y + 3, 40 * s, 10 * s, 0, 0, Math.PI * 2);
+  g.fill();
+
+  // Trunk and a forked branch, ink first and bark on top
   g.lineCap = "round";
-  // Two rails
-  [[-8, "#b07b4c"], [-2, "#b07b4c"]].forEach(([off, color]) => {
-    g.strokeStyle = INK;
-    g.lineWidth = 5.5;
+  const limbs = () => {
     g.beginPath();
-    if (horizontal) {
-      g.moveTo(x1, y1 + off);
-      g.lineTo(x2, y2 + off);
-    } else {
-      g.moveTo(x1 + off / 2, y1);
-      g.lineTo(x2 + off / 2, y2);
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + lean * 0.1, y - 18 * s, x + lean * 0.7, y - 34 * s);
+    g.moveTo(x + lean * 0.08, y - 12 * s);
+    g.quadraticCurveTo(x - lean * 0.5, y - 20 * s, x - lean * 1.1, y - 30 * s);
+  };
+  limbs();
+  g.strokeStyle = INK;
+  g.lineWidth = 11 * s;
+  g.stroke();
+  limbs();
+  g.strokeStyle = "#7a5634";
+  g.lineWidth = 7.5 * s;
+  g.stroke();
+
+  // Two tiers of foliage, the upper one pushed further by the wind
+  const tiers = [
+    { cx: x + lean * 0.4, cy: y - 42 * s, blobs: [[-44, 6, 15, 11], [-28, 0, 24, 16], [-4, -5, 28, 18], [22, 0, 24, 16], [40, 6, 16, 11]] },
+    { cx: x + lean * 1.1, cy: y - 66 * s, blobs: [[-20, 2, 18, 12], [2, -4, 22, 14], [22, 2, 16, 11]] },
+  ];
+  const each = (fn) => tiers.forEach((tier) => tier.blobs.forEach(([dx, dy, rx, ry]) => {
+    g.beginPath();
+    g.ellipse(tier.cx + dx * s, tier.cy + dy * s, rx * s, ry * s, 0, 0, Math.PI * 2);
+    fn();
+  }));
+  g.strokeStyle = INK;
+  g.lineWidth = 3;
+  each(() => g.stroke());
+  g.fillStyle = "#35603a";
+  each(() => g.fill());
+  // Sunlit tops
+  g.fillStyle = "#4f7f47";
+  tiers.forEach((tier) => tier.blobs.forEach(([dx, dy, rx, ry]) => {
+    g.beginPath();
+    g.ellipse(tier.cx + (dx - 3) * s, tier.cy + (dy - ry * 0.35) * s, rx * 0.6 * s, ry * 0.42 * s, 0, 0, Math.PI * 2);
+    g.fill();
+  }));
+}
+
+// An old-fashioned lamp post with a warm lantern.
+function drawLamp(g, x, y) {
+  g.fillStyle = "rgba(60,40,20,0.2)";
+  g.beginPath();
+  g.ellipse(x + 2, y + 2, 9, 3, 0, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 1.5;
+  g.fillStyle = "#3b3f45";
+  roundRect(g, x - 6, y - 6, 12, 7, 2);
+  g.fill();
+  g.stroke();
+  roundRect(g, x - 2.5, y - 48, 5, 44, 2);
+  g.fill();
+  g.stroke();
+  g.fillStyle = "rgba(255,214,140,0.28)";
+  g.beginPath();
+  g.arc(x, y - 56, 16, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#ffe3a3";
+  roundRect(g, x - 7, y - 64, 14, 16, 3);
+  g.fill();
+  g.stroke();
+  g.fillStyle = "#3b3f45";
+  g.beginPath();
+  g.moveTo(x - 10, y - 63);
+  g.lineTo(x, y - 72);
+  g.lineTo(x + 10, y - 63);
+  g.closePath();
+  g.fill();
+  g.stroke();
+}
+
+// A tile of soft beach sand: pale gold with darker and lighter grains.
+let sandTile = null;
+function sandPattern(g) {
+  if (!sandTile) {
+    const SIZE = 100, RES = 2;
+    const tile = document.createElement("canvas");
+    tile.width = tile.height = SIZE * RES;
+    const t = tile.getContext("2d");
+    t.scale(RES, RES);
+    t.fillStyle = COLORS.sand;
+    t.fillRect(0, 0, SIZE, SIZE);
+    let seed = 5;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 70; i++) {
+      t.fillStyle = rand() < 0.5 ? "rgba(255,255,255,0.5)" : "rgba(170,140,90,0.35)";
+      t.beginPath();
+      t.arc(rand() * SIZE, rand() * SIZE, 0.6 + rand() * 0.8, 0, Math.PI * 2);
+      t.fill();
     }
-    g.stroke();
-    g.strokeStyle = color;
-    g.lineWidth = 3;
-    g.stroke();
-  });
-  // Posts
-  for (let i = 0; i <= posts; i++) {
-    const x = x1 + ((x2 - x1) * i) / posts;
-    const y = y1 + ((y2 - y1) * i) / posts;
-    g.fillStyle = "rgba(60,40,20,0.2)";
-    g.beginPath();
-    g.ellipse(x + 1, y + 4, 5, 2, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = "#c08a58";
-    roundRect(g, x - 3.5, y - 16, 7, 19, 2);
-    g.fill();
-    g.strokeStyle = INK;
-    g.lineWidth = 1.5;
-    g.stroke();
+    sandTile = tile;
   }
+  const pattern = g.createPattern(sandTile, "repeat");
+  pattern.setTransform(new DOMMatrix().scale(0.5));
+  return pattern;
 }
 
 // A cluster of little flowers on a leafy mound.
@@ -1385,235 +1688,56 @@ function cobblePattern(g) {
   return pattern;
 }
 
-// The axis names, on wooden signposts standing at each end of the two streets.
-// REPAIR and AUGMENTATION point along the street; PRODUCT and ENVIRONMENT
-// carry a carved arrow.
-function signposts() {
-  return [
-    { text: "REPAIR", x: 175, y: ORIGIN.y + 28, point: -1 },
-    { text: "AUGMENTATION", x: WORLD.width - 240, y: ORIGIN.y + 28, point: 1 },
-    { text: "\u2191  PRODUCT", x: ORIGIN.x, y: 150, point: 0 },
-    { text: "\u2193  ENVIRONMENT", x: ORIGIN.x, y: WORLD.height - 80, point: 0 },
-  ];
-}
-
-function drawSignpost(g, sign) {
+// A green street sign: a metal pole with the name on an enamel blade.
+function drawStreetSign(g, sign) {
   const k = labelScale();
   g.save();
   g.translate(sign.x, sign.y);
   g.scale(k, k);
 
-  g.font = "700 20px Inter, sans-serif";
-  g.letterSpacing = "4px";
-  const w = g.measureText(sign.text).width + 34;
-  const h = 40;
-  const top = -30 - h; // the board sits on top of a short post
-  const tip = 18; // how far the pointed end sticks out
+  g.font = "700 15px Inter, sans-serif";
+  g.letterSpacing = "2px";
+  const text = sign.text.toUpperCase();
+  const w = g.measureText(text).width + 28;
+  const h = 30;
+  const top = -84;
 
-  // Shadow on the cobbles, and the post
+  // Shadow and pole
   g.fillStyle = "rgba(60,40,20,0.22)";
   g.beginPath();
-  g.ellipse(0, 2, 16, 5, 0, 0, Math.PI * 2);
+  g.ellipse(2, 2, 12, 4, 0, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = "#6e4526";
-  roundRect(g, -5, top + h - 4, 10, 36, 3);
-  g.fill();
-
-  // The board: arrow-shaped when it points along its street
-  const board = () => {
-    g.beginPath();
-    const left = -w / 2, right = w / 2;
-    if (sign.point < 0) {
-      g.moveTo(left, top + h / 2);
-      g.lineTo(left + tip, top);
-      g.lineTo(right, top);
-      g.lineTo(right, top + h);
-      g.lineTo(left + tip, top + h);
-    } else if (sign.point > 0) {
-      g.moveTo(left, top);
-      g.lineTo(right - tip, top);
-      g.lineTo(right, top + h / 2);
-      g.lineTo(right - tip, top + h);
-      g.lineTo(left, top + h);
-    } else {
-      roundRect(g, left, top, w, h, 5);
-      return;
-    }
-    g.closePath();
-  };
-  g.save();
-  g.translate(2, 4);
-  board();
-  g.fillStyle = "rgba(60,40,20,0.25)";
-  g.fill();
-  g.restore();
-  board();
-  const wood = g.createLinearGradient(0, top, 0, top + h);
-  wood.addColorStop(0, "#c89462");
-  wood.addColorStop(1, "#ad774a");
-  g.fillStyle = wood;
-  g.fill();
-  g.strokeStyle = "#7d5230";
-  g.lineWidth = 2.5;
-  g.lineJoin = "round";
-  g.stroke();
-
-  // Plank seam and wood grain
-  g.save();
-  board();
-  g.clip();
-  g.strokeStyle = "rgba(110,69,38,0.35)";
+  g.strokeStyle = INK;
   g.lineWidth = 1.5;
-  g.beginPath();
-  g.moveTo(-w / 2, top + h / 2);
-  g.lineTo(w / 2, top + h / 2);
+  g.fillStyle = "#8b939b";
+  roundRect(g, -3, top - 4, 6, -top + 6, 2);
+  g.fill();
   g.stroke();
-  g.strokeStyle = "rgba(255,236,210,0.18)";
-  g.lineWidth = 1;
   g.beginPath();
-  [0.22, 0.72].forEach((f) => {
-    g.moveTo(-w / 2, top + h * f);
-    g.bezierCurveTo(-w / 6, top + h * f - 3, w / 6, top + h * f + 3, w / 2, top + h * f);
-  });
+  g.arc(0, top - 7, 4.5, 0, Math.PI * 2);
+  g.fill();
   g.stroke();
-  g.restore();
 
-  // Nails
-  g.fillStyle = "#5a3a1e";
-  [-1, 1].forEach((side) => {
-    g.beginPath();
-    g.arc(side * (w / 2 - (sign.point * side > 0 ? tip + 4 : 8)), top + 8, 1.8, 0, Math.PI * 2);
-    g.fill();
-  });
+  // The blade, with its white enamel border
+  g.fillStyle = "rgba(30,40,30,0.25)";
+  roundRect(g, -w / 2 + 2, top + 4, w, h, 5);
+  g.fill();
+  g.fillStyle = "#2f6b4f";
+  roundRect(g, -w / 2, top, w, h, 5);
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 2;
+  g.stroke();
+  g.strokeStyle = "rgba(255,255,255,0.9)";
+  g.lineWidth = 1.5;
+  roundRect(g, -w / 2 + 3.5, top + 3.5, w - 7, h - 7, 3);
+  g.stroke();
 
-  // Carved lettering
   g.textAlign = "center";
   g.textBaseline = "middle";
-  const cx = sign.point * (-tip / 4);
-  g.fillStyle = "rgba(255,236,210,0.35)";
-  g.fillText(sign.text, cx + 2, top + h / 2 + 2);
-  g.fillStyle = "#4a2d17";
-  g.fillText(sign.text, cx + 2, top + h / 2 + 1);
-  g.restore();
-}
-
-// A block colour washed toward white, so it reads like coloured chalk.
-function chalkTint(hex, amount = 0.6) {
-  const n = parseInt(hex.slice(1), 16);
-  const mix = (c) => Math.round(c + (255 - c) * amount);
-  return `rgb(${mix(n >> 16)}, ${mix((n >> 8) & 255)}, ${mix(n & 255)})`;
-}
-
-// Each block's name, chalked onto an A-frame sandwich board out on the pavement.
-function drawBlockTitle(g, q) {
-  const topW = 330, botW = 360; // the frame flares out slightly toward the ground
-  const faceH = 100, legH = 22;
-  const rail = 11; // width of the wooden frame around the chalkboard
-  g.save();
-  g.translate(q.block.x + q.block.w / 2, q.block.y + 34);
-  g.scale(labelScale(), labelScale());
-
-  const frame = (inset) => {
-    const t = inset, b = faceH - inset;
-    const halfAt = (y) => (topW + (botW - topW) * (y / faceH)) / 2 - inset;
-    g.beginPath();
-    g.moveTo(-halfAt(t), t);
-    g.lineTo(halfAt(t), t);
-    g.lineTo(halfAt(b), b);
-    g.lineTo(-halfAt(b), b);
-    g.closePath();
-  };
-
-  // Shadow on the ground, then the back legs peeking out behind the front ones
-  g.fillStyle = "rgba(60,40,20,0.2)";
-  g.beginPath();
-  g.ellipse(4, faceH + legH + 2, botW / 2 + 14, 9, 0, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = "#6e4526";
-  [-1, 1].forEach((side) => {
-    roundRect(g, side * (botW / 2 - 16) - 5, faceH - 6, 10, legH + 2, 3);
-    g.fill();
-  });
-
-  // Front legs, splayed a little
-  g.fillStyle = "#9a653b";
-  g.strokeStyle = "#5e3b1f";
-  g.lineWidth = 2;
-  [-1, 1].forEach((side) => {
-    const x = side * (botW / 2);
-    g.beginPath();
-    g.moveTo(x - side * rail, faceH - 4);
-    g.lineTo(x, faceH - 4);
-    g.lineTo(x + side * 5, faceH + legH);
-    g.lineTo(x - side * (rail - 4), faceH + legH);
-    g.closePath();
-    g.fill();
-    g.stroke();
-  });
-
-  // Hinged handle across the top
-  g.fillStyle = "#7d5230";
-  roundRect(g, -46, -9, 92, 13, 5);
-  g.fill();
-  g.stroke();
-  g.fillStyle = "#b8b0a2";
-  [-30, 30].forEach((x) => {
-    g.beginPath();
-    g.arc(x, -3, 2.4, 0, Math.PI * 2);
-    g.fill();
-  });
-
-  // Wooden frame
-  frame(0);
-  const wood = g.createLinearGradient(0, 0, 0, faceH);
-  wood.addColorStop(0, "#c08a57");
-  wood.addColorStop(1, "#a36c40");
-  g.fillStyle = wood;
-  g.fill();
-  g.strokeStyle = "#5e3b1f";
-  g.lineWidth = 2.5;
-  g.lineJoin = "round";
-  g.stroke();
-
-  // The chalkboard, with a few faint wiped-out smudges from earlier messages
-  frame(rail);
-  const slate = g.createLinearGradient(0, rail, 0, faceH - rail);
-  slate.addColorStop(0, "#35463d");
-  slate.addColorStop(1, "#2a3830");
-  g.fillStyle = slate;
-  g.fill();
-  g.strokeStyle = "rgba(20,28,24,0.6)";
-  g.lineWidth = 1.5;
-  g.stroke();
-  g.save();
-  frame(rail);
-  g.clip();
-  g.fillStyle = "rgba(255,255,255,0.045)";
-  [[-110, 30, 70, 14, -0.15], [95, 70, 80, 12, 0.1], [20, 24, 50, 9, 0.05]].forEach(([x, y, rx, ry, rot]) => {
-    g.beginPath();
-    g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
-    g.fill();
-  });
-  g.restore();
-
-  // Chalk tray along the bottom rail
-  g.fillStyle = "#8a5a33";
-  roundRect(g, -botW / 2 + rail + 4, faceH - rail - 2, botW - 2 * rail - 8, 6, 2);
-  g.fill();
-
-  // Chalk lettering: the axes in the block's colour, the name in white
-  g.textAlign = "center";
-  g.textBaseline = "alphabetic";
-  g.fillStyle = chalkTint(q.accent);
-  g.font = "600 11px Inter, sans-serif";
-  g.letterSpacing = "3px";
-  g.fillText(q.axes.toUpperCase(), 0, 34);
+  g.fillStyle = "#ffffff";
+  g.fillText(text, 1, top + h / 2 + 1);
   g.letterSpacing = "0px";
-  g.font = "36px 'Patrick Hand', 'Chalkboard SE', cursive";
-  g.fillStyle = "rgba(255,255,255,0.18)"; // a soft chalk-dust halo
-  g.fillText(q.name, 1, 71);
-  g.fillStyle = "#f6f3ea";
-  g.fillText(q.name, 0, 70);
   g.restore();
 }
 
@@ -1622,8 +1746,16 @@ function drawBlockTitle(g, q) {
 /* ---------------------------------------------------------------------- */
 
 function areaAt(x, y) {
-  if (Math.abs(x - ORIGIN.x) < STREET / 2 && Math.abs(y - ORIGIN.y) < STREET / 2) return TOWN_SQUARE;
-  return QUADRANTS.find((q) => (x >= ORIGIN.x) === !!q.col && (y >= ORIGIN.y) === !!q.row);
+  if (y < sandY(x)) return SHORE;
+  let nearest = LEGS[0], best = Infinity;
+  LEGS.forEach((leg) => {
+    const d = distToSegment(x, y, leg.a, leg.b);
+    if (d < best) {
+      best = d;
+      nearest = leg;
+    }
+  });
+  return nearest;
 }
 
 function doorOf(b) {
@@ -1667,39 +1799,55 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 const areaBannerEl = document.getElementById("areaBanner");
-const minimapGridEl = document.getElementById("minimapGrid");
 const minimapDotEl = document.getElementById("minimapDot");
 
-// Minimap cells, in reading order: product row first, repair column first.
-[...QUADRANTS]
-  .sort((a, b) => a.row - b.row || a.col - b.col)
-  .forEach((q) => {
-    const cell = document.createElement("div");
-    cell.className = "minimap-cell";
-    cell.dataset.area = q.id;
-    cell.style.setProperty("--cell", q.ground);
-    cell.style.setProperty("--cell-accent", q.accent);
-    cell.textContent = q.name;
-    minimapGridEl.insertBefore(cell, minimapDotEl);
+const minimapMapEl = document.getElementById("minimapMap");
+
+// A tiny copy of the map: the sea, the beach, and the Z path, with each
+// stretch lit up in its colour while Alyssa walks it.
+function buildMinimap() {
+  const W = WORLD.width, H = WORLD.height;
+  const line = (pts, leg) =>
+    `<polyline points="${pts.map((p) => `${p.x},${p.y}`).join(" ")}" class="minimap-leg"
+      data-area="${leg.id}" style="--leg-accent: ${leg.accent}" />`;
+  minimapMapEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  minimapMapEl.innerHTML = `
+    <rect width="${W}" height="${H}" fill="${COLORS.grass}" />
+    <rect width="${W}" height="${SAND}" fill="${COLORS.sand}" />
+    <rect width="${W}" height="${SEA}" fill="#6fb3cc" />
+    ${line([ROUTE[0], ROUTE[1]], LEGS[0])}
+    ${LEGS.map((leg) => line([leg.a, leg.b], leg)).join("")}
+    ${buildings
+      .filter((b) => b.enter)
+      .map((b) => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="24" class="minimap-shop" />`)
+      .join("")}
+  `;
+  if (currentArea) highlightMinimap(currentArea);
+}
+
+function highlightMinimap(area) {
+  minimapMapEl.querySelectorAll(".minimap-leg").forEach((el) => {
+    el.classList.toggle("active", el.dataset.area === area.id);
   });
+}
 
 let currentArea = null;
 let bannerTimer = null;
+buildMinimap();
+window.addEventListener("resize", buildMinimap);
 
 function updateArea() {
   const area = areaAt(alyssa.x, alyssa.y);
   if (area === currentArea) return;
   currentArea = area;
 
-  [...minimapGridEl.querySelectorAll(".minimap-cell")].forEach((cell) => {
-    cell.classList.toggle("active", cell.dataset.area === area.id);
-  });
+  highlightMinimap(area);
 
-  // Announce each new block as Alyssa walks into it (not needed in the overview,
-  // where every block is already on screen).
-  if (area === TOWN_SQUARE || followAmount() < 0.5) return;
+  // Announce each new stretch as Alyssa walks onto it (not needed in the
+  // overview, where the whole path is already on screen).
+  if (followAmount() < 0.5) return;
   areaBannerEl.innerHTML = `
-    <p class="area-banner-kicker">${area.axes}</p>
+    <p class="area-banner-kicker">${area.kicker}</p>
     <p class="area-banner-name">${area.name}</p>
   `;
   areaBannerEl.style.setProperty("--area-accent", area.accent);
@@ -3230,9 +3378,9 @@ function render() {
   ctx.translate(-cameraX, -cameraY);
 
   drawGround(ctx);
-  QUADRANTS.forEach((q) => drawBlockTitle(ctx, q));
+  drawDecor(ctx);
   buildings.forEach((b) => drawBuilding(ctx, b));
-  signposts().forEach((sign) => drawSignpost(ctx, sign));
+  streetSigns().forEach((sign) => drawStreetSign(ctx, sign));
 
   // In the overview Alyssa is drawn larger, with a ring, so she's easy to spot.
   const spot = 1 - followAmount();
