@@ -711,6 +711,31 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
   g.fill();
   outline();
 
+  // Something carried in one hand: Jamie's bag, with the siren clip on it.
+  if (ch.carrying === "bag") {
+    const side = ch.facing === "left" ? -1 : 1;
+    const bx = side * 15, by = 6;
+    g.beginPath();
+    g.arc(bx, by - 1, 4.5, Math.PI, 0);
+    g.strokeStyle = INK;
+    g.lineWidth = 2.4;
+    g.stroke();
+    g.strokeStyle = "#c98a4f";
+    g.lineWidth = 1.1;
+    g.stroke();
+    roundRect(g, bx - 7.5, by - 1, 15, 13, 3);
+    g.fillStyle = "#e3b27a";
+    g.fill();
+    outline();
+    roundRect(g, bx - 3 + side * 2, by + 2, 6, 6, 1.6);
+    g.fillStyle = "#3e3226";
+    g.fill();
+    g.beginPath();
+    g.arc(bx + side * 2, by + 5, 1.5, 0, Math.PI * 2);
+    g.fillStyle = "#e0782a";
+    g.fill();
+  }
+
   // Medium-length hair sits behind the head and falls evenly to the jaw on
   // both sides, framing the face without covering it. The two sides stay
   // separate, leaving a gap under the chin.
@@ -1931,6 +1956,7 @@ function placeAlyssa(clientX, clientY) {
   const p = worldPointAt(clientX, clientY);
   Object.assign(alyssa, openSpotNear(p.x, p.y));
   alyssa.moving = false;
+  seedCompanion(-34, 4);
 }
 
 canvas.addEventListener("pointerdown", (e) => {
@@ -2128,6 +2154,7 @@ function enterLab() {
   alyssa.y = LAB.h - LAB.wall - 26;
   alyssa.facing = "up";
   alyssa.moving = false;
+  seedCompanion(-34, 4);
   setScene("lab");
 }
 
@@ -2137,6 +2164,7 @@ function leaveLab() {
   alyssa.y = door.y + CHAR_RADIUS + 18;
   alyssa.facing = "down";
   alyssa.moving = false;
+  seedCompanion(32, 2);
   labPromptEl.hidden = true;
   setScene("world");
 }
@@ -2179,6 +2207,7 @@ document.getElementById("renderBack").addEventListener("click", () => setScene("
 function updateLab(dt) {
   if (phoneOpen) return;
   stepCharacter(alyssa, dt, LAB_MOVE_SPEED, labObstacles, LAB_BOUNDS);
+  updateCompanion(dt);
   if (alyssa.y > LAB.h - LAB.wall + 4) {
     leaveLab();
     return;
@@ -2471,10 +2500,13 @@ function renderLab(now) {
 
   drawLabRoom(g, t);
 
-  // Fitter and Alyssa, back-to-front
+  // Fitter, Alyssa (and Jamie, if she's along), back-to-front
   [
     { y: labFitter.y, draw: () => drawCharacter(g, labFitter, labFitter.x, labFitter.y, 1.4, animPhase, false) },
     { y: alyssa.y, draw: () => drawCharacter(g, alyssa, alyssa.x, alyssa.y, 1.4, animPhase, !!alyssa.moving) },
+    ...(jamieJoined
+      ? [{ y: jamie.y, draw: () => drawCharacter(g, jamie, jamie.x, jamie.y, 1.4, animPhase + 0.7, !!jamie.moving) }]
+      : []),
   ]
     .sort((a, b) => a.y - b.y)
     .forEach((d) => d.draw());
@@ -2584,6 +2616,18 @@ const subsStory = [
     who: "jamie", device: "clip", walk: [[770, 450], [660, 498]],
     text: "oh and i bring this guy around attached to my bag when i'm on a walk or in my car. i can never hear those goshdarn ambulances or firetrucks! or a bike behind me. it lights up a blinking orange whenever it hears those things so i know to move to the side, whether i'm walking or driving.",
   },
+  {
+    who: "jamie",
+    text: "what are you doing tonight?",
+  },
+  {
+    who: "alyssa",
+    text: "hmm, nothing much, i don't really go out Friday evenings anymore. the world is overwhelming.",
+  },
+  {
+    who: "jamie",
+    text: "i forget you're new here! evenings in Carmel are awesome. let me take you to cafe lumen!",
+  },
 ];
 
 let storyStep = -1; // which step is playing; -1 once the story is over
@@ -2635,7 +2679,72 @@ function advanceStory() {
   } else {
     storyStep = -1;
     storyDevice = null;
+    jamieJoins();
   }
+}
+
+/* Once the story's over, Jamie grabs her bag (siren clip and all) and     */
+/* comes along to Cafe Lumen: from then on she follows a few steps behind  */
+/* Alyssa wherever she goes, so steering Alyssa walks them both.           */
+
+let jamieJoined = false;
+const companionTrail = []; // where Alyssa has walked, oldest first
+const FOLLOW_GAP = 44; // how far behind her Jamie walks, along her path
+
+function jamieJoins() {
+  jamieJoined = true;
+  jamie.carrying = "bag";
+  jamie.path = [];
+  companionTrail.length = 0;
+  companionTrail.push({ x: jamie.x, y: jamie.y }, { x: alyssa.x, y: alyssa.y });
+}
+
+// Puts Jamie at (dx, dy) from Alyssa: on arriving somewhere new, or after
+// Alyssa has been dragged or clicked into place.
+function seedCompanion(dx, dy) {
+  if (!jamieJoined) return;
+  jamie.x = alyssa.x + dx;
+  jamie.y = alyssa.y + dy;
+  jamie.facing = alyssa.facing;
+  jamie.moving = false;
+  companionTrail.length = 0;
+  companionTrail.push({ x: jamie.x, y: jamie.y }, { x: alyssa.x, y: alyssa.y });
+}
+
+// Jamie walks to the spot FOLLOW_GAP back along Alyssa's path, so she
+// follows the way Alyssa went instead of cutting corners through walls.
+function updateCompanion(dt) {
+  if (!jamieJoined) return;
+  const trail = companionTrail;
+  const last = trail[trail.length - 1];
+  if (!last || Math.hypot(alyssa.x - last.x, alyssa.y - last.y) > 2) trail.push({ x: alyssa.x, y: alyssa.y });
+
+  let remaining = FOLLOW_GAP, px = alyssa.x, py = alyssa.y, target = null;
+  for (let i = trail.length - 1; i >= 0; i--) {
+    const q = trail[i];
+    const d = Math.hypot(px - q.x, py - q.y);
+    if (d >= remaining) {
+      const f = remaining / d;
+      target = { x: px + (q.x - px) * f, y: py + (q.y - py) * f };
+      trail.splice(0, i); // everything older is behind her now
+      break;
+    }
+    remaining -= d;
+    px = q.x;
+    py = q.y;
+  }
+
+  const dx = target ? target.x - jamie.x : 0, dy = target ? target.y - jamie.y : 0;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 0.5) {
+    jamie.moving = false;
+    return;
+  }
+  const stride = Math.min(dist, 280 * dt);
+  jamie.x += (dx / dist) * stride;
+  jamie.y += (dy / dist) * stride;
+  jamie.moving = true;
+  jamie.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
 }
 
 storyBubbleEl.addEventListener("click", advanceStory);
@@ -2645,9 +2754,14 @@ function enterSubs() {
   alyssa.y = SUBS.h - SUBS.wall - 26;
   alyssa.facing = "up";
   alyssa.moving = false;
-  Object.assign(jamie, JAMIE_START, { facing: "down", path: [], moving: false });
   storyDevice = null;
-  startStoryStep(0);
+  if (jamieJoined) {
+    storyStep = -1;
+    seedCompanion(-34, 4);
+  } else {
+    Object.assign(jamie, JAMIE_START, { facing: "down", path: [], moving: false });
+    startStoryStep(0);
+  }
   setScene("subtitles");
 }
 
@@ -2657,6 +2771,7 @@ function leaveSubs() {
   alyssa.y = door.y + CHAR_RADIUS + 18;
   alyssa.facing = "down";
   alyssa.moving = false;
+  seedCompanion(32, 2);
   storyStep = -1;
   storyDevice = null;
   shownStoryStep = null;
@@ -2693,13 +2808,15 @@ function updateJamie(dt) {
 }
 
 function updateSubs(dt) {
+  // Jamie's in the way while she's showing Alyssa around, but not once she's following her.
   const jamieBox = { x: jamie.x - 12, y: jamie.y - 8, w: 24, h: 22 };
-  stepCharacter(alyssa, dt, SUBS_MOVE_SPEED, [...subsObstacles, jamieBox], SUBS_BOUNDS);
+  stepCharacter(alyssa, dt, SUBS_MOVE_SPEED, jamieJoined ? subsObstacles : [...subsObstacles, jamieBox], SUBS_BOUNDS);
   if (alyssa.y > SUBS.h - SUBS.wall + 4) {
     leaveSubs();
     return;
   }
-  updateJamie(dt);
+  if (jamieJoined) updateCompanion(dt);
+  else updateJamie(dt);
   stepTime += dt;
   deviceTime += dt;
   updateStoryBubble();
@@ -2708,6 +2825,7 @@ function updateSubs(dt) {
   let near = null, nearDist = DEVICE_REACH;
   if (storyStep < 0) {
     subsDevices.forEach((d) => {
+      if (d.id === "clip" && jamieJoined) return; // the bag's gone with Jamie
       const dist = Math.hypot(alyssa.x - d.x, alyssa.y - d.y);
       if (dist < nearDist) {
         near = d;
@@ -3084,6 +3202,13 @@ function drawSubsRoom(g, t) {
   g.moveTo(bn.x + 6, bn.y + bn.h / 2);
   g.lineTo(bn.x + bn.w - 6, bn.y + bn.h / 2);
   g.stroke();
+  if (!jamieJoined) drawBenchBag(g, bn, active("clip"), t);
+
+  subsPlants.forEach((p) => drawPottedPlant(g, p));
+}
+
+// Jamie's bag on the bench, with the siren clip blinking orange while she talks about it.
+function drawBenchBag(g, bn, clipActive, t) {
   g.beginPath();
   g.arc(bn.x + 56, bn.y - 6, 14, Math.PI, 0);
   g.strokeStyle = INK;
@@ -3097,7 +3222,7 @@ function drawSubsRoom(g, t) {
   g.fill();
   ink(g, 2);
   const cx = bn.x + 72, cy = bn.y + 6;
-  const blinking = active("clip") && Math.sin(t * 9) > 0;
+  const blinking = clipActive && Math.sin(t * 9) > 0;
   if (blinking) softGlow(g, cx, cy, 46, "rgba(255,138,42,0.6)");
   roundRect(g, cx - 8, cy - 8, 16, 16, 5);
   g.fillStyle = "#3e3226";
@@ -3107,8 +3232,6 @@ function drawSubsRoom(g, t) {
   g.arc(cx, cy, 4.2, 0, Math.PI * 2);
   g.fillStyle = blinking ? "#ff8a2a" : "#8a5a34";
   g.fill();
-
-  subsPlants.forEach((p) => drawPottedPlant(g, p));
 }
 
 // Puffs of jasmine mist, and little flowers, drifting up from the bottle.
@@ -3255,6 +3378,7 @@ function enterCafe() {
   ch.y = CAFE.h - CAFE.wall - 26;
   ch.facing = "up";
   ch.moving = false;
+  seedCompanion(-34, 4);
   setScene("cafe");
   cafeMusic.start();
 }
@@ -3266,6 +3390,7 @@ function leaveCafe() {
   ch.y = door.y + CHAR_RADIUS + 18;
   ch.facing = "down";
   ch.moving = false;
+  seedCompanion(32, 2);
   cafeMusic.stop();
   setScene("world");
 }
@@ -3275,6 +3400,7 @@ document.getElementById("cafeBack").addEventListener("click", leaveCafe);
 function updateCafe(dt) {
   const ch = alyssa;
   stepCharacter(ch, dt, CAFE_MOVE_SPEED, cafeObstacles, CAFE_BOUNDS);
+  updateCompanion(dt);
   // Stepping through the doorway takes you back outside.
   if (ch.y > CAFE.h - CAFE.wall + 4) leaveCafe();
 }
@@ -3669,6 +3795,9 @@ function renderCafe(now) {
       draw: () => drawCharacter(g, p, p.x, p.y, 1.4, animPhase + i * 1.9, false),
     })),
     { y: player.y, draw: () => drawCharacter(g, player, player.x, player.y, 1.4, animPhase, !!player.moving) },
+    ...(jamieJoined
+      ? [{ y: jamie.y, draw: () => drawCharacter(g, jamie, jamie.x, jamie.y, 1.4, animPhase + 0.7, !!jamie.moving) }]
+      : []),
   ];
   drawables.sort((a, b) => a.y - b.y).forEach((d) => d.draw());
 
@@ -3932,6 +4061,7 @@ function tick(now) {
 
 function update(dt) {
   stepCharacter(alyssa, dt, MOVE_SPEED);
+  updateCompanion(dt);
   updateCamera(dt);
   updateArea();
 }
@@ -3966,12 +4096,12 @@ function render() {
     ctx.restore();
   }
   const scale = 1.4 * labelScale(2, 0.55);
-  [...people, alyssa]
+  [...people, alyssa, ...(jamieJoined ? [jamie] : [])]
     .sort((a, b) => a.y - b.y)
     .forEach((ch, i) => {
-      const moving = ch === alyssa && !!alyssa.moving;
+      const moving = (ch === alyssa || ch === jamie) && !!ch.moving;
       drawCharacter(ctx, ch, ch.x, ch.y, scale, animPhase + i * 1.3, moving);
-      if (ch !== alyssa && ch !== activeSpeaker) drawSpeechHint(ctx, ch, scale);
+      if (ch !== alyssa && ch !== jamie && ch !== activeSpeaker) drawSpeechHint(ctx, ch, scale);
     });
 
   ctx.restore();
