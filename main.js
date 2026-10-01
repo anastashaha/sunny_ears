@@ -477,6 +477,8 @@ function setZoom(value) {
 }
 
 function updateCamera(dt) {
+  // Hold still while Alyssa is being dragged, so she stays under the cursor.
+  if (draggingAlyssa) return;
   const fit = fitZoom();
   if (wantOverview) targetZoom = fit;
   targetZoom = clamp(targetZoom, fit, MAX_ZOOM);
@@ -1778,24 +1780,91 @@ function enterBuilding(b) {
   else if (b.enter === "subtitles") enterSubs();
 }
 
-function buildingAtScreenPoint(clientX, clientY) {
+function worldPointAt(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  const wx = (clientX - rect.left) / zoom + cameraX;
-  const wy = (clientY - rect.top) / zoom + cameraY;
+  return { x: (clientX - rect.left) / zoom + cameraX, y: (clientY - rect.top) / zoom + cameraY };
+}
+
+function buildingAtScreenPoint(clientX, clientY) {
+  const { x: wx, y: wy } = worldPointAt(clientX, clientY);
   return buildings.find(
     (b) => b.enter && wx >= b.x && wx <= b.x + b.w && wy >= b.y - 22 && wy <= b.y + b.h
   );
 }
 
-canvas.addEventListener("click", (e) => {
-  if (currentScene !== "world") return;
-  const b = buildingAtScreenPoint(e.clientX, e.clientY);
-  if (b) enterBuilding(b);
+/* For now, Alyssa can also be moved with the mouse: drag her anywhere, or  */
+/* click an open spot on the map to put her there.                         */
+
+let draggingAlyssa = false;
+let suppressClick = false;
+
+function alyssaAtScreenPoint(clientX, clientY) {
+  const p = worldPointAt(clientX, clientY);
+  const s = 1.4 * labelScale(2, 0.55); // the scale she's drawn at
+  return Math.abs(p.x - alyssa.x) < 20 * s && p.y > alyssa.y - 52 * s && p.y < alyssa.y + 8 * s;
+}
+
+// The nearest spot to (x, y) where she isn't inside a building, tree or the sea.
+function openSpotNear(x, y) {
+  const fits = (px, py) => !worldObstacles.some((o) => circleRectCollides(px, py, CHAR_RADIUS, o));
+  for (let r = 0; r < 600; r += 8) {
+    const steps = r ? 24 : 1;
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      const px = clamp(x + Math.cos(a) * r, CHAR_RADIUS, WORLD.width - CHAR_RADIUS);
+      const py = clamp(y + Math.sin(a) * r, CHAR_RADIUS, WORLD.height - CHAR_RADIUS);
+      if (fits(px, py)) return { x: px, y: py };
+    }
+  }
+  return { x, y };
+}
+
+function placeAlyssa(clientX, clientY) {
+  const p = worldPointAt(clientX, clientY);
+  Object.assign(alyssa, openSpotNear(p.x, p.y));
+  alyssa.moving = false;
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  suppressClick = false;
+  if (currentScene !== "world" || !alyssaAtScreenPoint(e.clientX, e.clientY)) return;
+  draggingAlyssa = true;
+  try {
+    canvas.setPointerCapture(e.pointerId); // keep the drag going if the cursor leaves the window
+  } catch (err) {}
+  canvas.style.cursor = "grabbing";
 });
 
-canvas.addEventListener("mousemove", (e) => {
+canvas.addEventListener("pointerup", (e) => {
+  if (!draggingAlyssa) return;
+  draggingAlyssa = false;
+  suppressClick = true; // the click that ends a drag shouldn't also place her or enter a shop
+  placeAlyssa(e.clientX, e.clientY);
+  canvas.style.cursor = "grab";
+});
+
+canvas.addEventListener("click", (e) => {
   if (currentScene !== "world") return;
-  canvas.style.cursor = buildingAtScreenPoint(e.clientX, e.clientY) ? "pointer" : "default";
+  if (suppressClick) {
+    suppressClick = false;
+    return;
+  }
+  const b = buildingAtScreenPoint(e.clientX, e.clientY);
+  if (b) enterBuilding(b);
+  else placeAlyssa(e.clientX, e.clientY);
+});
+
+canvas.addEventListener("pointermove", (e) => {
+  if (currentScene !== "world") return;
+  if (draggingAlyssa) {
+    const p = worldPointAt(e.clientX, e.clientY);
+    alyssa.x = clamp(p.x, CHAR_RADIUS, WORLD.width - CHAR_RADIUS);
+    alyssa.y = clamp(p.y, CHAR_RADIUS, WORLD.height - CHAR_RADIUS);
+    return;
+  }
+  canvas.style.cursor = alyssaAtScreenPoint(e.clientX, e.clientY)
+    ? "grab"
+    : buildingAtScreenPoint(e.clientX, e.clientY) ? "pointer" : "default";
 });
 
 const areaBannerEl = document.getElementById("areaBanner");
