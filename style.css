@@ -691,7 +691,7 @@ kbd {
   to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
 }
 
-/* --- Subtitles scene: three options for captioning the world --- */
+/* --- Jamie's house: the "subtitles for the world" in her home --- */
 
 .subs-scene {
   background: radial-gradient(circle at 50% 45%, #fffaf0 0%, #efe2c8 80%);
@@ -706,6 +706,39 @@ kbd {
 }
 
 .subs-scene .back-btn { z-index: 1; }
+
+/* Jamie and Alyssa's conversation: a quote bubble you can click (or press E) to carry on. */
+.story-bubble {
+  max-width: min(380px, calc(100vw - 24px));
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Hung below the speaker instead of above, with the tail flipped to point up. */
+.story-bubble.below {
+  transform: translate(-50%, 0);
+  animation-name: story-in-below;
+}
+
+@keyframes story-in-below {
+  from { opacity: 0; transform: translate(-50%, -8%) scale(0.85); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+.story-bubble.below .quote-tail {
+  top: auto;
+  bottom: calc(100% - 2.5px);
+  transform: translateX(-35%) scaleY(-1);
+}
+
+.story-next {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
 
 /* Describes the option Alyssa is standing near; sits just above the hint bar. */
 .subs-card {

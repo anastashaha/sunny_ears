@@ -69,9 +69,11 @@ const buildings = [
     chimney: true, flowerBoxes: true, door: true, doorColor: "#c9793a",
   },
   {
-    name: "Subtitles for the World", leg: 1, at: 0.8, w: 210, h: 118,
-    style: "future", glow: "#a98bf5", display: "captions",
-    door: true, enter: "subtitles", enterLabel: "enter Subtitles for the World",
+    // Alyssa's friend Jamie lives here: inside is "Subtitles for the World".
+    name: "Jamie's House", leg: 1, at: 0.8, w: 210, h: 118,
+    wall: "#fbeee0", roof: "#6f95b5", trim: "#fff6ea", windows: 2,
+    chimney: true, flowerBoxes: true, door: true, doorColor: "#c9793a",
+    enter: "subtitles", enterLabel: "visit Jamie's house",
   },
   // Last stretch: Individual -> Community & Environment
   {
@@ -575,6 +577,13 @@ window.addEventListener("keydown", (e) => {
     if ((k === "e" || k === "enter") && nearFitter()) {
       e.preventDefault();
       setScene("render");
+    }
+    return;
+  }
+  if (currentScene === "subtitles") {
+    if (k === "e" || k === "enter" || k === " ") {
+      e.preventDefault();
+      advanceStory();
     }
     return;
   }
@@ -2472,51 +2481,54 @@ function renderLab(now) {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Subtitles scene: "Subtitles for the World", three options for what     */
-/* captions for everyday sounds could look like, set around a cozy room.  */
+/* Jamie's house: "Subtitles for the World"                               */
+/*                                                                        */
+/* Alyssa visits her friend Jamie, who is hard of hearing, and finds the  */
+/* sounds of the house already "subtitled" by small objects, inspired by  */
+/* Google's Little Signals. Jamie walks her through them one at a time;   */
+/* E (or a click on the speech bubble) moves the story along.             */
 /* ---------------------------------------------------------------------- */
 
 const SUBS = { w: 900, h: 640, wall: 26, doorX: 450, doorW: 76 };
 const SUBS_BOUNDS = { width: SUBS.w, height: SUBS.h };
 const SUBS_MOVE_SPEED = 150;
 const DEVICE_REACH = 110;
+const JAMIE_SPEED = 130;
 
-// The three options. `x`/`y` is where Alyssa has to stand near to learn about it.
-// Options 2 and 3 are placeholders until the real concepts are ready.
-const subsDevices = [
-  {
-    id: "screen",
-    option: "Option 1",
-    name: "The big screen",
-    description: "A large shared screen that captions the sounds around your home, like the door alarm.",
-    caption: "The door alarm is ringing!",
-    x: 450, y: 210,
-  },
-  {
-    id: "glasses",
-    option: "Option 2 · Placeholder",
-    name: "Caption glasses",
-    description: "Live captions float in your view, right beside whoever or whatever is making the sound.",
-    caption: "“Are you coming to dinner?”",
-    x: 200, y: 450,
-  },
-  {
-    id: "band",
-    option: "Option 3 · Placeholder",
-    name: "Caption wristband",
-    description: "A quiet buzz on your wrist and a short caption, so you never miss a sound meant for you.",
-    caption: "Someone is calling your name",
-    x: 700, y: 450,
-  },
-];
-
+// Furniture, in the room's own coordinates.
 const subsScreen = { x: 240, y: 30, w: 420, h: 128 };
 const subsSofa = { x: 330, y: 280, w: 240, h: 56 };
-const subsFrontDoor = { x: SUBS.wall, y: 190, h: 90 }; // the door whose alarm is ringing
-const subsPedestals = subsDevices
-  .filter((d) => d.id !== "screen")
-  .map((d) => ({ device: d, x: d.x, y: d.y, r: 34 }));
-const subsPlants = [{ x: 60, y: 60 }, { x: 840, y: 60 }, { x: 60, y: 590 }, { x: 840, y: 590 }];
+const subsCounter = { x: 40, y: 40, w: 170, h: 58 };
+const subsBed = { x: 712, y: 40, w: 148, h: 190 };
+const subsLampTable = { x: 640, y: 300, r: 22 };
+const subsScentTable = { x: 300, y: 545, r: 22 };
+const subsBench = { x: 580, y: 538, w: 112, h: 44 };
+const subsPlants = [{ x: 60, y: 590 }, { x: 840, y: 590 }];
+
+// Jamie's "subtitles" around the house. `x`/`y` is where Alyssa stands to
+// read about each one once the story is over.
+const subsDevices = [
+  {
+    id: "scent", name: "Jasmine doorbell", x: 300, y: 545,
+    description: "Sprays a strong scent of jasmine whenever the doorbell rings.",
+  },
+  {
+    id: "screen", name: "The big screen", x: 450, y: 215,
+    description: "Writes out the sounds around the house: the kettle, the dryer, the dog.",
+  },
+  {
+    id: "lamp", name: "Name lamp", x: 640, y: 300,
+    description: "Glows in someone's colour when they call Jamie's name from another room.",
+  },
+  {
+    id: "pillow", name: "Pillow shaker", x: 770, y: 255,
+    description: "Shakes the bed if the smoke alarm goes off at night, and wakes Jamie in the morning.",
+  },
+  {
+    id: "clip", name: "Siren clip", x: 636, y: 560,
+    description: "Clips to her bag and blinks orange when it hears an ambulance, a fire truck or a bike behind her.",
+  },
+];
 
 const subsObstacles = [
   { x: 0, y: 0, w: SUBS.w, h: SUBS.wall },
@@ -2527,17 +2539,66 @@ const subsObstacles = [
     x: SUBS.doorX + SUBS.doorW / 2, y: SUBS.h - SUBS.wall,
     w: SUBS.w - (SUBS.doorX + SUBS.doorW / 2), h: SUBS.wall,
   },
-  subsScreen, subsSofa,
-  ...subsPedestals.map((p) => circleBox(p)),
+  subsScreen, subsSofa, subsCounter, subsBed, subsBench,
+  circleBox(subsLampTable), circleBox(subsScentTable),
   ...subsPlants.map((p) => circleBox(p, 15)),
 ];
+
+const jamie = {
+  name: "Jamie",
+  x: 450, y: 420, facing: "down", path: [],
+  palette: { skin: "#a86f4c", hair: "#2a1c14", hairStyle: "medium", ears: true, outfit: "#7aa874", outfitTrim: "#f4ecd8" },
+};
+const JAMIE_START = { x: 450, y: 420 };
+
+// The story, one speech bubble per step. Jamie walks `walk` (waypoints that
+// keep her clear of the furniture) before she speaks, and `device` comes to
+// life for the step.
+const subsStory = [
+  {
+    who: "jamie",
+    text: "alyssa! you made it. come on in, make yourself at home.",
+  },
+  {
+    who: "alyssa", device: "scent", delay: 1.4, // a moment to see the spray before she notices
+    text: "oh hey i smell jasmine!",
+  },
+  {
+    who: "jamie", device: "scent", walk: [[350, 490]],
+    text: "oh yeah! that object sprays a strong scent of jasmine whenever the doorbell rings because i can't hear it. my package must've arrived.",
+  },
+  {
+    // The bubble hangs below Jamie here and for the bed, so it doesn't cover what she's showing.
+    who: "jamie", device: "screen", walk: [[250, 470], [250, 215], [450, 215]], below: true,
+    text: "and this big screen is like subtitles for my whole house. it listens for the sounds i'd miss and writes them out: the kettle boiling, the dryer finishing, the dog barking at the mail carrier.",
+  },
+  {
+    who: "jamie", device: "lamp", walk: [[620, 215]],
+    text: "this little lamp glows whenever someone calls my name from another room. my roommate used to shout for me forever. now she just says “jamie!” and it lights up in her color, so i know who's looking for me.",
+  },
+  {
+    who: "jamie", device: "pillow", walk: [[770, 255]], below: true,
+    text: "and this one lets me sleep easy. a beeping smoke alarm would never wake me up, so if it goes off at night, this pad under my pillow shakes the whole bed. it doubles as my morning alarm too.",
+  },
+  {
+    who: "jamie", device: "clip", walk: [[770, 450], [660, 498]],
+    text: "oh and i bring this guy around attached to my bag when i'm on a walk or in my car. i can never hear those goshdarn ambulances or firetrucks! or a bike behind me. it lights up a blinking orange whenever it hears those things so i know to move to the side, whether i'm walking or driving.",
+  },
+];
+
+let storyStep = -1; // which step is playing; -1 once the story is over
+let stepTime = 0; // seconds since the step began
+let storyDevice = null; // the object that's currently doing its thing
+let deviceTime = 0; // seconds since it started
 
 const subsCanvas = document.getElementById("subsCanvas");
 const subsCtx = subsCanvas.getContext("2d");
 const subsCardEl = document.getElementById("subsCard");
+const storyBubbleEl = document.getElementById("storyBubble");
 const subsView = { scale: 1, ox: 0, oy: 0 };
 const subsBuilding = buildings.find((b) => b.enter === "subtitles");
 let subsActiveDevice = null;
+let shownStoryStep = null;
 
 function resizeSubsCanvas() {
   subsCanvas.width = Math.round(viewW * dpr);
@@ -2551,11 +2612,42 @@ function resizeSubsCanvas() {
 window.addEventListener("resize", resizeSubsCanvas);
 resizeSubsCanvas();
 
+function startStoryStep(i) {
+  const step = subsStory[i];
+  storyStep = i;
+  stepTime = 0;
+  jamie.path = (step.walk || []).map(([x, y]) => ({ x, y }));
+  if ((step.device || null) !== storyDevice) {
+    storyDevice = step.device || null;
+    deviceTime = 0;
+  }
+}
+
+// Ready once Jamie has finished walking and the step's pause has passed.
+function storyStepReady() {
+  return storyStep >= 0 && jamie.path.length === 0 && stepTime >= (subsStory[storyStep].delay || 0.35);
+}
+
+function advanceStory() {
+  if (!storyStepReady()) return;
+  if (storyStep + 1 < subsStory.length) {
+    startStoryStep(storyStep + 1);
+  } else {
+    storyStep = -1;
+    storyDevice = null;
+  }
+}
+
+storyBubbleEl.addEventListener("click", advanceStory);
+
 function enterSubs() {
   alyssa.x = SUBS.doorX;
   alyssa.y = SUBS.h - SUBS.wall - 26;
   alyssa.facing = "up";
   alyssa.moving = false;
+  Object.assign(jamie, JAMIE_START, { facing: "down", path: [], moving: false });
+  storyDevice = null;
+  startStoryStep(0);
   setScene("subtitles");
 }
 
@@ -2565,6 +2657,10 @@ function leaveSubs() {
   alyssa.y = door.y + CHAR_RADIUS + 18;
   alyssa.facing = "down";
   alyssa.moving = false;
+  storyStep = -1;
+  storyDevice = null;
+  shownStoryStep = null;
+  storyBubbleEl.hidden = true;
   subsCardEl.hidden = true;
   subsActiveDevice = null;
   setScene("world");
@@ -2572,33 +2668,104 @@ function leaveSubs() {
 
 document.getElementById("subsBack").addEventListener("click", leaveSubs);
 
+// Jamie follows her waypoints, then turns to face Alyssa.
+function updateJamie(dt) {
+  const target = jamie.path[0];
+  if (target) {
+    const dx = target.x - jamie.x, dy = target.y - jamie.y;
+    const dist = Math.hypot(dx, dy);
+    const stride = JAMIE_SPEED * dt;
+    if (dist <= stride) {
+      jamie.x = target.x;
+      jamie.y = target.y;
+      jamie.path.shift();
+    } else {
+      jamie.x += (dx / dist) * stride;
+      jamie.y += (dy / dist) * stride;
+    }
+    jamie.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+    jamie.moving = true;
+    return;
+  }
+  jamie.moving = false;
+  const dx = alyssa.x - jamie.x, dy = alyssa.y - jamie.y;
+  jamie.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+}
+
 function updateSubs(dt) {
-  stepCharacter(alyssa, dt, SUBS_MOVE_SPEED, subsObstacles, SUBS_BOUNDS);
+  const jamieBox = { x: jamie.x - 12, y: jamie.y - 8, w: 24, h: 22 };
+  stepCharacter(alyssa, dt, SUBS_MOVE_SPEED, [...subsObstacles, jamieBox], SUBS_BOUNDS);
   if (alyssa.y > SUBS.h - SUBS.wall + 4) {
     leaveSubs();
     return;
   }
+  updateJamie(dt);
+  stepTime += dt;
+  deviceTime += dt;
+  updateStoryBubble();
 
-  // Describe whichever option Alyssa is standing near.
+  // Once the story's over, describe whichever object Alyssa is standing near.
   let near = null, nearDist = DEVICE_REACH;
-  subsDevices.forEach((d) => {
-    const dist = Math.hypot(alyssa.x - d.x, alyssa.y - d.y);
-    if (dist < nearDist) {
-      near = d;
-      nearDist = dist;
-    }
-  });
+  if (storyStep < 0) {
+    subsDevices.forEach((d) => {
+      const dist = Math.hypot(alyssa.x - d.x, alyssa.y - d.y);
+      if (dist < nearDist) {
+        near = d;
+        nearDist = dist;
+      }
+    });
+  }
   if (near !== subsActiveDevice) {
     subsActiveDevice = near;
     subsCardEl.hidden = !near;
     if (near) {
       subsCardEl.innerHTML = `
-        <p class="subs-card-option">${near.option}</p>
+        <p class="subs-card-option">Subtitles for the World</p>
         <p class="subs-card-name">${near.name}</p>
         <p class="subs-card-desc">${near.description}</p>
       `;
     }
   }
+}
+
+// The speech bubble over whoever's talking, with a prompt to carry on.
+function updateStoryBubble() {
+  const step = storyStepReady() ? storyStep : null;
+  if (step !== shownStoryStep) {
+    shownStoryStep = step;
+    storyBubbleEl.hidden = step === null;
+    if (step !== null) {
+      const { who, text } = subsStory[step];
+      const last = step === subsStory.length - 1;
+      storyBubbleEl.innerHTML = `
+        <p class="quote-name">${who === "jamie" ? "Jamie" : "Alyssa"}</p>
+        <p class="quote-text">${text}</p>
+        <p class="story-next">Press <kbd>E</kbd> ${last ? "to finish" : "to continue"}</p>
+        <svg class="quote-tail" viewBox="0 0 30 24" aria-hidden="true">
+          <path d="M3 0 Q 10 12 5 22 Q 17 14 27 0" />
+        </svg>
+      `;
+    }
+  }
+  if (step === null) return;
+
+  const { who, below } = subsStory[step];
+  const speaker = who === "jamie" ? jamie : alyssa;
+  const { scale: s, ox, oy } = subsView;
+  const sx = ox + speaker.x * s;
+  const half = storyBubbleEl.offsetWidth / 2;
+  const left = clamp(sx, half + 12, viewW - half - 12);
+  storyBubbleEl.classList.toggle("below", !!below);
+  storyBubbleEl.style.left = `${left}px`;
+  if (below) {
+    // Under their feet, with the tail pointing up at them.
+    const sy = oy + (speaker.y + 16) * s;
+    storyBubbleEl.style.top = `${Math.min(sy + 22, viewH - storyBubbleEl.offsetHeight - 12)}px`;
+  } else {
+    const sy = oy + (speaker.y - 58) * s;
+    storyBubbleEl.style.top = `${Math.max(sy - 22, storyBubbleEl.offsetHeight + 12)}px`;
+  }
+  storyBubbleEl.style.setProperty("--tail-x", `${clamp(sx - left + half, 20, half * 2 - 20)}px`);
 }
 
 // A caption strip: white text on a dark rounded bar, like subtitles.
@@ -2618,11 +2785,57 @@ function drawCaption(g, text, x, y, size, alpha = 1) {
   g.restore();
 }
 
-function drawSubsRoom(g, t) {
-  const { wall } = SUBS;
-  const blink = Math.sin(t * 6) > 0; // the door alarm's light
+// A round wooden side table.
+function drawSideTable(g, table) {
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  g.beginPath();
+  g.arc(table.x + 2, table.y + 5, table.r, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.arc(table.x, table.y, table.r, 0, Math.PI * 2);
+  g.fillStyle = "#c08a58";
+  g.fill();
+  ink(g, 2.2);
+  g.beginPath();
+  g.arc(table.x, table.y, table.r - 5, 0, Math.PI * 2);
+  g.fillStyle = "#e9cfa8";
+  g.fill();
+}
 
-  // A cozy living room: honey-wood floor, cream walls, a sage rug by the screen
+// A little jasmine flower: five white petals around a yellow centre.
+function drawJasmine(g, x, y, size, alpha) {
+  g.save();
+  g.globalAlpha = alpha;
+  g.translate(x, y);
+  g.scale(size, size);
+  g.fillStyle = "#ffffff";
+  g.strokeStyle = "rgba(62,50,38,0.45)";
+  g.lineWidth = 0.8;
+  for (let p = 0; p < 5; p++) {
+    const a = (p / 5) * Math.PI * 2;
+    g.beginPath();
+    g.ellipse(Math.cos(a) * 3.4, Math.sin(a) * 3.4, 2.8, 1.8, a, 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+  }
+  g.fillStyle = "#f2cf5b";
+  g.beginPath();
+  g.arc(0, 0, 1.6, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+const SCREEN_CAPTIONS = [
+  ["KITCHEN", "the kettle is boiling"],
+  ["LAUNDRY", "the dryer is done"],
+  ["FRONT YARD", "the dog is barking"],
+];
+
+function drawSubsRoom(g, t) {
+  const active = (id) => storyDevice === id;
+  const pulse = 0.5 + Math.sin(t * 3) * 0.5;
+
+  // A cozy living room: honey-wood floor, cream walls, a sage rug by the sofa
   drawRoomShell(g, SUBS, {
     floorA: "#ecd3b0", floorB: "#e6caa4", seam: "rgba(120,80,45,0.25)",
     wall: "#efe2c8", wallTrim: "#f8efdc", doorway: "#f7efe0", mat: "#e9b27d",
@@ -2639,30 +2852,64 @@ function drawSubsRoom(g, t) {
       g.stroke();
     }],
   });
-  // The front door on the left wall, its alarm light blinking
-  const fd = subsFrontDoor;
-  g.beginPath();
-  g.rect(0, fd.y, wall + 8, fd.h);
-  g.fillStyle = "#b8703f";
+
+  // Kitchen counter in the corner, with the kettle on the stove
+  const c = subsCounter;
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, c.x + 3, c.y + 6, c.w, c.h, 6);
   g.fill();
-  ink(g, 2.2);
-  g.beginPath();
-  g.rect(wall, fd.y + 6, 8, fd.h - 12);
-  g.fillStyle = "#e0a06a";
+  roundRect(g, c.x, c.y, c.w, c.h, 6);
+  g.fillStyle = "#c08a58";
   g.fill();
-  ink(g, 1.4);
-  if (blink) softGlow(g, wall + 14, fd.y - 16, 46, "rgba(255,120,60,0.45)");
-  g.fillStyle = blink ? "#ff7a3c" : "#b8653a";
+  ink(g, 2.5);
+  roundRect(g, c.x + 6, c.y + 6, c.w - 12, c.h - 12, 4);
+  g.fillStyle = "#f4ead8";
+  g.fill();
+  ink(g, 1.5);
   g.beginPath();
-  g.arc(wall + 14, fd.y - 16, 7, 0, Math.PI * 2);
+  g.arc(c.x + 50, c.y + 29, 15, 0, Math.PI * 2);
+  g.fillStyle = "#4a4038";
+  g.fill();
+  ink(g, 1.5);
+  const kx = c.x + 50, ky = c.y + 27;
+  g.beginPath();
+  g.arc(kx, ky - 9, 6, Math.PI, 0);
+  g.strokeStyle = INK;
+  g.lineWidth = 2.5;
+  g.stroke();
+  g.beginPath();
+  g.arc(kx, ky, 11, 0, Math.PI * 2);
+  g.fillStyle = "#e07a2f";
   g.fill();
   ink(g, 1.6);
+  g.beginPath();
+  g.moveTo(kx + 9, ky - 3);
+  g.lineTo(kx + 17, ky - 8);
+  g.lineWidth = 3;
+  g.strokeStyle = INK;
+  g.stroke();
+  if (active("screen")) {
+    // Steam curling off the kettle
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 0.8 + i / 3) % 1;
+      g.fillStyle = `rgba(255,255,255,${0.7 * (1 - ph)})`;
+      g.beginPath();
+      g.arc(kx + 19 + Math.sin(ph * 6 + i) * 4, ky - 10 - ph * 34, 4 + ph * 6, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.beginPath();
+  g.arc(c.x + 125, c.y + 29, 8, 0, Math.PI * 2);
+  g.fillStyle = "#8fc1e3";
+  g.fill();
+  ink(g, 1.5);
 
-  // Option 1: the big screen on the back wall, captioning the door alarm
+  // The big screen on the back wall: a calm picture, or captions of the
+  // sounds around the house while Jamie shows it off
   const sc = subsScreen;
   softGlow(g, sc.x + sc.w / 2, sc.y + sc.h, 280, "rgba(255,220,160,0.3)");
   roundRect(g, sc.x, sc.y, sc.w, sc.h, 10);
-  g.fillStyle = "#8a5a34"; // a wooden frame around the screen
+  g.fillStyle = "#8a5a34";
   g.fill();
   ink(g, 2.5);
   const glass = g.createLinearGradient(0, sc.y, 0, sc.y + sc.h);
@@ -2672,7 +2919,6 @@ function drawSubsRoom(g, t) {
   roundRect(g, sc.x + 8, sc.y + 8, sc.w - 16, sc.h - 16, 6);
   g.fill();
   ink(g, 1.8);
-  // A calm picture on screen: a sun over soft hills
   g.fillStyle = "rgba(246,178,110,0.55)";
   g.beginPath();
   g.arc(sc.x + sc.w - 90, sc.y + 44, 18, 0, Math.PI * 2);
@@ -2686,14 +2932,22 @@ function drawSubsRoom(g, t) {
   g.lineTo(sc.x + 8, sc.y + sc.h - 8);
   g.closePath();
   g.fill();
-  g.fillStyle = "#e07a2f";
-  g.font = "700 11px Inter, sans-serif";
-  g.letterSpacing = "2px";
-  g.textAlign = "center";
-  g.textBaseline = "middle";
-  g.fillText("[ DOOR ALARM ]", sc.x + sc.w / 2, sc.y + 72);
-  g.letterSpacing = "0px";
-  drawCaption(g, subsDevices[0].caption, sc.x + sc.w / 2, sc.y + 100, 20);
+  if (active("screen")) {
+    const i = Math.floor(deviceTime / 2.4) % SCREEN_CAPTIONS.length;
+    const fade = Math.min(1, ((deviceTime % 2.4) / 0.3));
+    const [where, what] = SCREEN_CAPTIONS[i];
+    g.save();
+    g.globalAlpha = fade;
+    g.fillStyle = "#f2b36b";
+    g.font = "700 11px Inter, sans-serif";
+    g.letterSpacing = "2px";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(`[ ${where} ]`, sc.x + sc.w / 2, sc.y + 64);
+    g.letterSpacing = "0px";
+    g.restore();
+    drawCaption(g, what, sc.x + sc.w / 2, sc.y + 94, 20, fade);
+  }
 
   // Sofa facing the screen
   g.fillStyle = "rgba(60,40,20,0.18)";
@@ -2710,72 +2964,170 @@ function drawSubsRoom(g, t) {
     ink(g, 1.5);
   }
 
-  // Pedestals for options 2 and 3
-  subsPedestals.forEach((p, i) => {
-    softGlow(g, p.x, p.y, 90, "rgba(255,214,150,0.35)");
-    g.fillStyle = "rgba(60,40,20,0.18)";
-    g.beginPath();
-    g.arc(p.x + 2, p.y + 5, p.r, 0, Math.PI * 2);
-    g.fill();
-    g.beginPath();
-    g.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    g.fillStyle = "#c08a58";
-    g.fill();
-    ink(g, 2.5);
-    g.beginPath();
-    g.arc(p.x, p.y, p.r - 6, 0, Math.PI * 2);
-    g.fillStyle = "#fdf7ea";
-    g.fill();
-    ink(g, 1.5);
-  });
-
-  // Option 2: caption glasses, with their caption floating above
-  const gl = subsDevices[1];
-  g.strokeStyle = INK;
-  g.lineWidth = 3;
-  g.fillStyle = "rgba(143,193,227,0.45)";
-  [-11, 11].forEach((dx) => {
-    roundRect(g, gl.x + dx - 9, gl.y - 6, 18, 13, 5);
-    g.fill();
-    g.stroke();
-  });
+  // The name lamp on its side table: glowing her roommate's colour when it
+  // hears "jamie!"
+  const lt = subsLampTable;
+  drawSideTable(g, lt);
+  if (active("lamp")) softGlow(g, lt.x, lt.y - 6, 110, `rgba(95,199,184,${0.3 + pulse * 0.3})`);
   g.beginPath();
-  g.moveTo(gl.x - 2, gl.y);
-  g.lineTo(gl.x + 2, gl.y);
-  g.moveTo(gl.x - 20, gl.y - 2);
-  g.lineTo(gl.x - 26, gl.y + 12);
-  g.moveTo(gl.x + 20, gl.y - 2);
-  g.lineTo(gl.x + 26, gl.y + 12);
-  g.stroke();
-  drawCaption(g, gl.caption, gl.x, gl.y - 62 + Math.sin(t * 1.5) * 2, 13);
+  g.arc(lt.x, lt.y - 6, 13, 0, Math.PI * 2);
+  g.fillStyle = active("lamp") ? "#7fd9cc" : "#f3dcb4";
+  g.fill();
+  ink(g, 1.8);
+  g.beginPath();
+  g.arc(lt.x, lt.y - 6, 4, 0, Math.PI * 2);
+  g.fillStyle = active("lamp") ? "#e9fffb" : "#d9b98c";
+  g.fill();
+  if (active("lamp")) {
+    const ph = (deviceTime * 0.5) % 1;
+    drawCaption(g, "“jamie!”", lt.x, lt.y - 46 - ph * 18, 13, Math.min(1, (1 - ph) * 2));
+  }
 
-  // Option 3: caption wristband, with a short caption on its screen
-  const band = subsDevices[2];
-  roundRect(g, band.x - 7, band.y - 24, 14, 48, 6);
+  // The bed in the corner, with the pillow shaker under the pillow. It
+  // shakes the whole bed, and the smoke alarm above it flashes, while Jamie
+  // talks about it.
+  const b = subsBed;
+  const shaking = active("pillow");
+  const shake = shaking ? Math.sin(t * 55) * 1.8 : 0;
+  g.save();
+  g.translate(shake, 0);
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, b.x + 3, b.y + 6, b.w, b.h, 10);
+  g.fill();
+  roundRect(g, b.x, b.y, b.w, b.h, 10);
+  g.fillStyle = "#a8744a";
+  g.fill();
+  ink(g, 2.5);
+  roundRect(g, b.x + 8, b.y + 14, b.w - 16, b.h - 22, 8);
+  g.fillStyle = "#fdf7ea";
+  g.fill();
+  ink(g, 1.5);
+  roundRect(g, b.x + 8, b.y + 76, b.w - 16, b.h - 84, 8);
+  g.fillStyle = "#8fb7d6";
+  g.fill();
+  ink(g, 1.5);
+  g.strokeStyle = "rgba(255,255,255,0.45)";
+  g.lineWidth = 2;
+  g.beginPath();
+  for (let y = b.y + 92; y < b.y + b.h - 14; y += 16) {
+    g.moveTo(b.x + 14, y);
+    g.lineTo(b.x + b.w - 14, y);
+  }
+  g.stroke();
+  roundRect(g, b.x + b.w / 2 - 16, b.y + 52, 32, 12, 4); // the shaker pad, peeking out
   g.fillStyle = "#5b8fa8";
   g.fill();
-  ink(g, 1.8);
-  roundRect(g, band.x - 14, band.y - 11, 28, 22, 6);
+  ink(g, 1.3);
+  roundRect(g, b.x + 22, b.y + 22, b.w - 44, 36, 12);
+  g.fillStyle = "#ffffff";
+  g.fill();
+  ink(g, 1.5);
+  g.restore();
+  if (shaking) {
+    g.strokeStyle = `rgba(91,143,168,${0.4 + pulse * 0.5})`;
+    g.lineWidth = 2;
+    g.lineCap = "round";
+    [-1, 1].forEach((side) => {
+      [0, 1].forEach((n) => {
+        g.beginPath();
+        g.arc(b.x + b.w / 2 + side * (b.w / 2 + 6 + n * 8), b.y + 42, 10 + n * 6,
+          side > 0 ? -0.6 : Math.PI - 0.6, side > 0 ? 0.6 : Math.PI + 0.6);
+        g.stroke();
+      });
+    });
+  }
+  const alarmX = b.x - 34, alarmY = 13;
+  if (shaking && Math.sin(t * 8) > 0) softGlow(g, alarmX, alarmY + 6, 40, "rgba(255,80,60,0.45)");
+  g.beginPath();
+  g.arc(alarmX, alarmY, 9, 0, Math.PI * 2);
+  g.fillStyle = "#f6f3ea";
+  g.fill();
+  ink(g, 1.6);
+  g.beginPath();
+  g.arc(alarmX, alarmY, 2.6, 0, Math.PI * 2);
+  g.fillStyle = shaking && Math.sin(t * 8) > 0 ? "#ff4d3d" : "#b9a58c";
+  g.fill();
+
+  // The jasmine doorbell on its little table by the front door
+  const st = subsScentTable;
+  drawSideTable(g, st);
+  roundRect(g, st.x - 8, st.y - 16, 16, 20, 5);
+  g.fillStyle = "rgba(246,214,160,0.95)";
+  g.fill();
+  ink(g, 1.5);
+  g.fillStyle = "rgba(255,255,255,0.6)";
+  roundRect(g, st.x - 5, st.y - 13, 3, 12, 1.5);
+  g.fill();
+  g.beginPath();
+  g.rect(st.x - 3, st.y - 22, 6, 6);
+  g.fillStyle = "#d9b25a";
+  g.fill();
+  ink(g, 1.2);
+  g.beginPath();
+  g.arc(st.x + 7, st.y - 21, 3.6, 0, Math.PI * 2);
+  g.fillStyle = "#e8889a";
+  g.fill();
+  ink(g, 1.2);
+
+  // The bench by the door, with Jamie's bag and its siren clip
+  const bn = subsBench;
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, bn.x + 3, bn.y + 6, bn.w, bn.h, 8);
+  g.fill();
+  roundRect(g, bn.x, bn.y, bn.w, bn.h, 8);
+  g.fillStyle = "#a8744a";
+  g.fill();
+  ink(g, 2.2);
+  g.strokeStyle = "rgba(62,50,38,0.35)";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(bn.x + 6, bn.y + bn.h / 2);
+  g.lineTo(bn.x + bn.w - 6, bn.y + bn.h / 2);
+  g.stroke();
+  g.beginPath();
+  g.arc(bn.x + 56, bn.y - 6, 14, Math.PI, 0);
+  g.strokeStyle = INK;
+  g.lineWidth = 4;
+  g.stroke();
+  g.strokeStyle = "#c98a4f";
+  g.lineWidth = 2;
+  g.stroke();
+  roundRect(g, bn.x + 30, bn.y - 8, 52, 38, 8);
+  g.fillStyle = "#e3b27a";
+  g.fill();
+  ink(g, 2);
+  const cx = bn.x + 72, cy = bn.y + 6;
+  const blinking = active("clip") && Math.sin(t * 9) > 0;
+  if (blinking) softGlow(g, cx, cy, 46, "rgba(255,138,42,0.6)");
+  roundRect(g, cx - 8, cy - 8, 16, 16, 5);
   g.fillStyle = "#3e3226";
   g.fill();
-  ink(g, 1.8);
-  g.fillStyle = `rgba(255,170,90,${0.6 + Math.sin(t * 3) * 0.3})`;
+  ink(g, 1.4);
   g.beginPath();
-  g.arc(band.x, band.y, 3, 0, Math.PI * 2);
+  g.arc(cx, cy, 4.2, 0, Math.PI * 2);
+  g.fillStyle = blinking ? "#ff8a2a" : "#8a5a34";
   g.fill();
-  drawCaption(g, band.caption, band.x, band.y - 62 + Math.sin(t * 1.5 + 1) * 2, 13);
-
-  // Option numbers set into the floor
-  g.fillStyle = "rgba(62,50,38,0.6)";
-  g.font = "700 11px Inter, sans-serif";
-  g.letterSpacing = "2px";
-  g.textAlign = "center";
-  g.fillText("OPTION 1", sc.x + sc.w / 2, sc.y + sc.h + 18);
-  g.fillText("OPTION 2", gl.x, gl.y + 52);
-  g.fillText("OPTION 3", band.x, band.y + 52);
-  g.letterSpacing = "0px";
 
   subsPlants.forEach((p) => drawPottedPlant(g, p));
+}
+
+// Puffs of jasmine mist, and little flowers, drifting up from the bottle.
+// Drawn over the characters, so the scent fills the room.
+function drawScentMist(g) {
+  if (storyDevice !== "scent") return;
+  const { x, y } = subsScentTable;
+  const appear = Math.min(1, deviceTime * 1.5);
+  for (let k = 0; k < 14; k++) {
+    const ph = (deviceTime * 0.4 + k / 14) % 1;
+    const px = x + 4 + Math.sin(k * 2.3 + ph * 3) * (8 + ph * 70);
+    const py = y - 24 - ph * 170;
+    const alpha = (1 - ph) * appear;
+    g.fillStyle = `rgba(255,255,255,${0.45 * alpha})`;
+    g.beginPath();
+    g.arc(px, py, 6 + ph * 20, 0, Math.PI * 2);
+    g.fill();
+    if (k % 3 === 0) drawJasmine(g, px, py, 0.8 + ph * 0.6, alpha);
+  }
 }
 
 function renderSubs(now) {
@@ -2795,7 +3147,10 @@ function renderSubs(now) {
   g.restore();
 
   drawSubsRoom(g, t);
-  drawCharacter(g, alyssa, alyssa.x, alyssa.y, 1.4, animPhase, !!alyssa.moving);
+  [jamie, alyssa]
+    .sort((a, b) => a.y - b.y)
+    .forEach((ch) => drawCharacter(g, ch, ch.x, ch.y, 1.4, animPhase, !!ch.moving));
+  drawScentMist(g);
 }
 
 /* ---------------------------------------------------------------------- */
