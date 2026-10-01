@@ -809,12 +809,16 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
     g.stroke();
   }
 
-  // Her hearing aid, once she's picked it up: worn on her right ear, or on
-  // whichever ear we can see when she's side-on.
+  // Hearing aids. Alyssa wears one on her right ear once she's picked it up;
+  // Jamie wears a pair (`hearingAidPair`). Side-on, it's on whichever ear we can see.
   if (ch.hearingAid && p.ears) {
-    const earX = sideways ? (dir === "left" ? 7 : -7) : dir === "up" ? 10.2 : -10.2;
-    const out = sideways ? (dir === "left" ? 1 : -1) : Math.sign(earX); // toward the back of the ear
-    drawHearingAid(g, earX, -16.5, out, ch.hearingAid);
+    if (sideways) {
+      const out = dir === "left" ? 1 : -1; // toward the back of the ear
+      drawHearingAid(g, out * 7, -16.5, out, ch.hearingAid);
+    } else {
+      const sides = ch.hearingAidPair ? [-1, 1] : [dir === "up" ? 1 : -1];
+      sides.forEach((side) => drawHearingAid(g, side * 10.2, -16.5, side, ch.hearingAid));
+    }
   }
 
   // Hair on top: a short fringe for "medium", hair swept back into the bun
@@ -2579,6 +2583,7 @@ const subsObstacles = [
 const jamie = {
   name: "Jamie",
   x: 450, y: 420, facing: "down", path: [],
+  hearingAid: "#e8833a", hearingAidPair: true, // a pair, like Alyssa's but orange
   palette: { skin: "#a86f4c", hair: "#2a1c14", hairStyle: "medium", ears: true, outfit: "#7aa874", outfitTrim: "#f4ecd8" },
 };
 const JAMIE_START = { x: 450, y: 420 };
