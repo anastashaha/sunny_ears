@@ -557,6 +557,11 @@ window.addEventListener("keydown", (e) => {
   }
 
   if (currentScene === "lab") {
+    if ((k === "e" || k === "enter") && nearPickup()) {
+      e.preventDefault();
+      alyssa.hearingAid = HEARING_AID_COLOR;
+      return;
+    }
     if ((k === "e" || k === "enter") && nearFitter()) {
       e.preventDefault();
       setScene("render");
@@ -585,6 +590,39 @@ window.addEventListener("blur", () => keys.clear());
 /* ---------------------------------------------------------------------- */
 /* Character + world rendering                                            */
 /* ---------------------------------------------------------------------- */
+
+// A behind-the-ear hearing aid on an ear at (x, y): a curved body tucked
+// behind it (`out` is the direction away from the face), and a thin tube
+// over the top into the ear.
+function drawHearingAid(g, x, y, out, color) {
+  g.save();
+  g.lineCap = "round";
+  const tube = () => {
+    g.beginPath();
+    g.moveTo(x + out * 3.4, y - 4.4);
+    g.quadraticCurveTo(x + out * 0.6, y - 7, x - out * 0.2, y - 1.2);
+  };
+  tube();
+  g.strokeStyle = INK;
+  g.lineWidth = 2.2;
+  g.stroke();
+  tube();
+  g.strokeStyle = color;
+  g.lineWidth = 1.1;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(x + out * 4.2, y - 0.4, 2.2, 4.6, out * 0.3, 0, Math.PI * 2);
+  g.fillStyle = color;
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 1.2;
+  g.stroke();
+  g.fillStyle = "rgba(255,255,255,0.85)";
+  g.beginPath();
+  g.arc(x + out * 4.4, y - 2.6, 0.8, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
 
 // Draws a character at (cx, cy) in the given context, scaled by `scale`.
 // `phase` drives the idle/walk animation; `facing` is one of down/up/left/right.
@@ -725,6 +763,14 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
     g.beginPath();
     g.arc(ex, -16.5, 1.3, Math.PI * 0.6, Math.PI * 1.6, dir === "right");
     g.stroke();
+  }
+
+  // Her hearing aid, once she's picked it up: worn on her right ear, or on
+  // whichever ear we can see when she's side-on.
+  if (ch.hearingAid && p.ears) {
+    const earX = sideways ? (dir === "left" ? 7 : -7) : dir === "up" ? 10.2 : -10.2;
+    const out = sideways ? (dir === "left" ? 1 : -1) : Math.sign(earX); // toward the back of the ear
+    drawHearingAid(g, earX, -16.5, out, ch.hearingAid);
   }
 
   // Hair on top: a short fringe for "medium", hair swept back into the bun
@@ -2009,6 +2055,12 @@ const labPedestals = [180, 320, 460].flatMap((y, i) => [
   { x: 92, y, color: GADGET_COLORS[i] },
   { x: 808, y, color: GADGET_COLORS[i + 3] },
 ]);
+// The one gadget Alyssa can take with her: the blue one on the top-right
+// stand. Once picked up, she wears it as a hearing aid everywhere she goes.
+const labPickup = labPedestals.find((p) => p.x > LAB.w / 2 && p.y === 180);
+const HEARING_AID_COLOR = "#3f8fd6";
+labPickup.color = HEARING_AID_COLOR;
+const PICKUP_REACH = 74;
 const labShelf = { x: 250, y: 34, w: 400, h: 44 };
 const labBasin = { x: 170, y: 548, r: 50 };
 const labLoungers = [
@@ -2074,6 +2126,12 @@ function nearFitter() {
   return Math.hypot(alyssa.x - labFitter.x, alyssa.y - labFitter.y) < FITTER_REACH;
 }
 
+function nearPickup() {
+  return !alyssa.hearingAid && Math.hypot(alyssa.x - labPickup.x, alyssa.y - labPickup.y) < PICKUP_REACH;
+}
+
+const labPromptTitleEl = labPromptEl.querySelector(".lab-prompt-title");
+
 document.getElementById("labBack").addEventListener("click", leaveLab);
 document.getElementById("renderBack").addEventListener("click", () => setScene("lab"));
 
@@ -2084,13 +2142,20 @@ function updateLab(dt) {
     return;
   }
 
-  // "Try on your new superpower", floating above the fitter when Alyssa is close.
-  const near = nearFitter();
-  labPromptEl.hidden = !near;
-  if (near) {
+  // A prompt floating above whatever Alyssa is close to: the stand with her
+  // gadget ("Pick up your new power gadget!"), or the fitter ("Try on your
+  // new superpower").
+  const spot = nearPickup()
+    ? { x: labPickup.x, y: labPickup.y - 34, title: "Pick up your new power gadget!" }
+    : nearFitter()
+      ? { x: labFitter.x, y: labFitter.y - 58, title: "Try on your new superpower" }
+      : null;
+  labPromptEl.hidden = !spot;
+  if (spot) {
     const { scale: s, ox, oy } = labView;
-    labPromptEl.style.left = `${ox + labFitter.x * s}px`;
-    labPromptEl.style.top = `${oy + (labFitter.y - 58) * s}px`;
+    labPromptTitleEl.textContent = spot.title;
+    labPromptEl.style.left = `${ox + spot.x * s}px`;
+    labPromptEl.style.top = `${oy + spot.y * s}px`;
   }
 }
 
@@ -2242,9 +2307,15 @@ function drawLabRoom(g, t) {
     drawGadget(g, labShelf.x + 40 + i * 64, labShelf.y + 22, GADGET_COLORS[i], 0.9, t + i);
   }
 
-  // Pedestals with gadgets on display
+  // Pedestals with gadgets on display. The one Alyssa can pick up glows blue
+  // until she takes it, and is left empty after.
   labPedestals.forEach((p, i) => {
+    const pickup = p === labPickup;
+    const taken = pickup && alyssa.hearingAid;
     softGlow(g, p.x, p.y, 70, "rgba(255,214,150,0.35)");
+    if (pickup && !taken) {
+      softGlow(g, p.x, p.y, 92, `rgba(110,175,225,${0.3 + (0.5 + Math.sin(t * 2.4) * 0.5) * 0.35})`);
+    }
     g.fillStyle = "rgba(60,40,20,0.18)";
     roundRect(g, p.x - 26, p.y - 22, 56, 56, 12);
     g.fill();
@@ -2256,7 +2327,7 @@ function drawLabRoom(g, t) {
     g.fillStyle = "#fdf7ea";
     g.fill();
     ink(g, 1.5);
-    drawGadget(g, p.x, p.y, p.color, 1.3, t + i * 0.7);
+    if (!taken) drawGadget(g, p.x, p.y, p.color, 1.3, t + i * 0.7);
   });
 
   // Still-water basin with slow ripples
