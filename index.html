@@ -13,10 +13,11 @@
   <div id="app" data-scene="world">
     <canvas id="world"></canvas>
     <div class="quote-bubble" id="quoteBubble" role="status" hidden></div>
+    <a class="open-link" id="openLink" target="_blank" rel="noopener" hidden></a>
     <div class="enter-prompt" id="enterPrompt" hidden>Press <kbd>E</kbd> to enter Cafe Lumen</div>
 
     <header class="hud hud-top">
-      <nav class="minimap" aria-label="Where Alyssa is on the map">
+      <nav class="minimap" aria-label="Where Anna is on the map">
         <div class="minimap-frame">
           <svg class="minimap-map" id="minimapMap" preserveAspectRatio="none" aria-hidden="true"></svg>
           <span class="minimap-dot" id="minimapDot" aria-hidden="true"></span>
@@ -27,7 +28,7 @@
     <div class="area-banner" id="areaBanner" aria-live="polite"></div>
 
     <div class="zoom-controls" role="group" aria-label="Zoom">
-      <button class="zoom-toggle" id="zoomToggle" type="button">Zoom in on Alyssa</button>
+      <button class="zoom-toggle" id="zoomToggle" type="button">Zoom in on Anna</button>
       <button class="zoom-step" id="zoomOut" type="button" aria-label="Zoom out">&minus;</button>
       <button class="zoom-step" id="zoomIn" type="button" aria-label="Zoom in">+</button>
     </div>
@@ -38,76 +39,38 @@
       <button class="back-btn" id="cafeBack" type="button">&larr; Back to the city</button>
       <div class="cafe-header">
         <h2 class="cafe-title">Cafe Lumen</h2>
-        <p class="cafe-subtitle">Open late &middot; evening</p>
       </div>
       <button class="music-pill" id="musicToggle" type="button" aria-pressed="false" aria-label="Mute music">
         <span class="music-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
         <span class="music-label" id="musicLabel">Soft music playing</span>
       </button>
-      <div class="subs-card cafe-card" id="cafeCard" role="status" hidden></div>
-      <p class="hint cafe-hint">Move with <kbd>WASD</kbd> or the arrow keys &middot; walk up to the glowing markers to see what they do &middot; walk out the front door or press <kbd>Esc</kbd> to leave</p>
+      <div class="lab-prompt" id="cafePrompt" hidden>
+        <span class="lab-prompt-title">Sit down and chat</span>
+        <span class="lab-prompt-key">Press <kbd>E</kbd></span>
+      </div>
     </section>
 
-    <!-- Inside the Wearables Lab: a spa-like showroom of wearable ear gadgets -->
+    <!-- Inside the Form Studio: a cozy lounge showing off the Sunny Ears cuffs -->
     <section id="labScene" class="scene lab-scene">
       <canvas id="labCanvas"></canvas>
       <button class="back-btn" id="labBack" type="button">&larr; Back to the city</button>
       <div class="lab-header">
-        <p class="lab-eyebrow">Repair &rarr; Augmentation</p>
-        <h2 class="lab-title">Wearables Lab</h2>
+        <h2 class="lab-title">Form Studio</h2>
       </div>
       <div class="lab-prompt" id="labPrompt" hidden>
         <span class="lab-prompt-title">Try on your new superpower</span>
         <span class="lab-prompt-key">Press <kbd>E</kbd></span>
       </div>
-      <p class="hint lab-hint">Move with <kbd>WASD</kbd> or the arrow keys &middot; pick up your gadget from the glowing stand &middot; walk up to the fitter to try yours on &middot; walk out the front door or press <kbd>Esc</kbd> to leave</p>
     </section>
 
-    <!-- The phone that pops up once Alyssa picks up her hearing aid. The screen is
-         a placeholder until the mobile walk-through of her data is ready. -->
-    <div class="phone-popup" id="phonePopup" role="dialog" aria-modal="true" aria-labelledby="phoneMessage" hidden>
-      <div class="phone">
-        <div class="phone-screen">
-          <div class="phone-status" aria-hidden="true">
-            <span>9:41</span>
-            <span class="phone-island"></span>
-            <span class="phone-battery"></span>
-          </div>
-          <div class="phone-content">
-            <svg class="phone-icon" viewBox="0 0 48 48" aria-hidden="true">
-              <circle cx="24" cy="24" r="23" fill="#3f8fd6" />
-              <path d="M17 29 A10 10 0 1 1 33 22" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" />
-              <ellipse cx="18" cy="31" rx="4" ry="5.5" transform="rotate(25 18 31)" fill="#fff" />
-              <circle cx="31" cy="17" r="2.2" fill="#ffd089" />
-            </svg>
-            <p class="phone-message" id="phoneMessage">welcome to your new power-up! stay updated on your data here!</p>
-          </div>
-        </div>
-      </div>
-      <button class="phone-close" id="phoneClose" type="button">Got it <kbd>E</kbd></button>
-    </div>
-
-    <!-- Jamie's house: her friend shows Alyssa the "subtitles for the world" built into her home -->
+    <!-- Jamie's house: her friend shows Anna the "subtitles for the world" built into her home -->
     <section id="subsScene" class="scene subs-scene">
       <canvas id="subsCanvas"></canvas>
       <button class="back-btn" id="subsBack" type="button">&larr; Back to the city</button>
       <div class="lab-header">
-        <p class="lab-eyebrow">Sound &rarr; Context &middot; Subtitles for the World</p>
-        <h2 class="lab-title">Jamie's House</h2>
+        <h2 class="lab-title">Jamie's World</h2>
       </div>
       <div class="quote-bubble story-bubble" id="storyBubble" role="status" aria-live="polite" hidden></div>
-      <div class="subs-card" id="subsCard" role="status" hidden></div>
-      <p class="hint lab-hint">Move with <kbd>WASD</kbd> or the arrow keys &middot; press <kbd>E</kbd> to hear Jamie out &middot; walk out the front door or press <kbd>Esc</kbd> to leave</p>
-    </section>
-
-    <!-- The wearable, up close. Placeholder until the 3D rendering of the product is ready. -->
-    <section id="renderScene" class="scene render-scene">
-      <button class="back-btn" id="renderBack" type="button">&larr; Back to the lab</button>
-      <h1 class="render-question">what if we created a new symbol for hearing?</h1>
-      <div class="render-placeholder" role="img" aria-label="Placeholder for the 3D rendering of the product">
-        <span class="render-placeholder-label">3D product rendering</span>
-        <span class="render-placeholder-note">Coming soon</span>
-      </div>
     </section>
   </div>
 
