@@ -10,7 +10,7 @@
 /*   2nd stretch (right -> left):  Sound      -> Context                  */
 /*   3rd stretch (left -> right):  Individual -> Community & Environment  */
 /*                                                                        */
-/* Alyssa starts on the beach and follows the path down to Cafe Lumen.    */
+/* Anna starts on the beach and follows the path down to Cafe Lumen.    */
 /* ---------------------------------------------------------------------- */
 
 // The map's height is fixed; its width follows the window's shape so the
@@ -32,7 +32,7 @@ const COLORS = {
   sand: "#f0dfb8",
 };
 
-// The three stretches of the Z, in the order Alyssa walks them. Each runs
+// The three stretches of the Z, in the order Anna walks them. Each runs
 // from `a` to `b` (set in layoutWorld); its two ends are named on street signs.
 const LEGS = [
   { id: "repairAugmentation", from: "Repair", to: "Augmentation", kicker: "First stretch", accent: "#c9793a" },
@@ -51,17 +51,20 @@ const ROUTE = [];
 const buildings = [
   // First stretch: Repair -> Augmentation
   {
+    // A little nod to Carmel: a real local landmark, with its name on a sign
+    // above the door (it's not a place you can go in).
     leg: 0, at: 0.3, w: 180, h: 118, wall: "#f6e7cf", roof: "#8a6a9c", trim: "#fbf3e6", windows: 2,
     chimney: true, flowerBoxes: true, door: true, doorColor: "#5b8fa8",
+    sign: "The Carmel Foundation",
   },
   {
     leg: 0, at: 0.52, w: 170, h: 112, wall: "#fdf3e1", roof: "#b85c3c", trim: "#fff6ea", windows: 2,
     awning: true, door: true, doorColor: "#7a4a36",
   },
   {
-    name: "Wearables Lab", leg: 0, at: 0.74, w: 300, h: 150,
-    style: "future", glow: "#4fd8e0", display: "gadgets",
-    door: true, enter: "lab", enterLabel: "enter the Wearables Lab",
+    name: "Form Studio", leg: 0, at: 0.74, w: 300, h: 150,
+    style: "spa", glow: "#f6c27a",
+    door: true, enter: "lab", enterLabel: "enter the Form Studio",
   },
   // Second stretch: Sound -> Context
   {
@@ -69,11 +72,10 @@ const buildings = [
     chimney: true, flowerBoxes: true, door: true, doorColor: "#c9793a",
   },
   {
-    // Alyssa's friend Jamie lives here: inside is "Subtitles for the World".
+    // Anna's friend Jamie lives here: inside is "Subtitles for the World".
     name: "Jamie's House", leg: 1, at: 0.8, w: 210, h: 118,
-    wall: "#fbeee0", roof: "#6f95b5", trim: "#fff6ea", windows: 2,
-    chimney: true, flowerBoxes: true, door: true, doorColor: "#c9793a",
-    enter: "subtitles", enterLabel: "visit Jamie's house",
+    style: "cottage", door: true,
+    enter: "subtitles", enterLabel: "visit Jamie's House",
   },
   // Last stretch: Individual -> Community & Environment
   {
@@ -81,16 +83,15 @@ const buildings = [
     chimney: true, flowerBoxes: true, door: true, doorColor: "#b85c3c",
   },
   {
-    name: "Cafe Lumen", leg: 2, at: 0.84, w: 340, h: 190,
-    wall: "#f6dcc0", roof: "#b85c3c", trim: "#fff4e8", windows: 4, awning: true, flowerBoxes: true,
-    windowColor: "#ffe2b0", door: true, enter: "cafe", enterLabel: "enter Cafe Lumen",
+    name: "Cafe Lumen", leg: 2, at: 0.84, w: 340, h: 190, style: "cafe",
+    door: true, enter: "cafe", enterLabel: "enter Cafe Lumen",
   },
 ];
 
 /* ---------------------------------------------------------------------- */
 /* People: residents of the map, each with a quote from our research.     */
 /* They're scattered at random along their stretch of the path on every   */
-/* visit, and share their quote in a speech bubble when Alyssa walks up.  */
+/* visit, and share their quote in a speech bubble when Anna walks up.  */
 /* `region` is the id of a stretch in LEGS.                               */
 /* ---------------------------------------------------------------------- */
 
@@ -152,7 +153,7 @@ const people = [
 ];
 people.forEach((p) => (p.facing = "down"));
 
-const QUOTE_REACH = 80; // how close Alyssa gets before a quote pops up
+const QUOTE_REACH = 80; // how close Anna gets before a quote pops up
 const PERSON_SPACING = 130; // minimum distance between people on the same stretch
 
 /* Path geometry ---------------------------------------------------------- */
@@ -210,11 +211,15 @@ function sandY(x) {
   return SAND + Math.sin(x / 190 + 2) * 12;
 }
 
-// Maps a person's random (u, v) in 0..1 to a spot just off the path along
-// their stretch, so they keep their place when the map stretches with the window.
+// Maps a person's random (u, v) in 0..1 to a spot on the grass beside the
+// path along their stretch, so they keep their place when the map stretches
+// with the window. They stand well back, so Anna can walk anywhere on the
+// path without bumping into them or setting off their quotes: she has to
+// step off the path toward someone to hear what they have to say.
+const PERSON_PATH_GAP = 115; // from the edge of the path to where they stand
 function regionPoint(region, u, v) {
   const leg = LEGS.find((l) => l.id === region);
-  return besidePath(leg, 0.18 + u * 0.64, v < 0.5 ? 1 : -1, 26);
+  return besidePath(leg, 0.18 + u * 0.64, v < 0.5 ? 1 : -1, PERSON_PATH_GAP);
 }
 
 /* Street signs, lamp posts and greenery ---------------------------------- */
@@ -333,12 +338,12 @@ layoutWorld(window.innerWidth / window.innerHeight);
 const cafeBuilding = buildings.find((b) => b.enter === "cafe");
 
 /* ---------------------------------------------------------------------- */
-/* Alyssa: the one character we follow through the map                    */
+/* Anna: the one character we follow through the map                    */
 /* ---------------------------------------------------------------------- */
 
 // She starts on the beach, at the top of the path.
-const alyssa = {
-  name: "Alyssa",
+const anna = {
+  name: "Anna",
   x: ROUTE[0].x,
   y: SEA + 52,
   facing: "down",
@@ -356,7 +361,7 @@ const CHAR_RADIUS = 16;
 const MOVE_SPEED = 210; // px/sec
 
 // Scatter everyone: pick random spots that stay clear of buildings (and their
-// doors), of each other, and of where Alyssa starts.
+// doors), of each other, and of where Anna starts.
 function scatterPeople() {
   const placed = [];
   const clearOfBuildings = (x, y) =>
@@ -373,9 +378,10 @@ function scatterPeople() {
       const u = Math.random(), v = Math.random();
       const pt = regionPoint(p.region, u, v);
       const ok =
+        distToRoute(pt.x, pt.y) > PATH_HALF + QUOTE_REACH + 20 && // out of quote range from anywhere on the path
         clearOfBuildings(pt.x, pt.y) &&
         clearOfProps(pt.x, pt.y) &&
-        Math.hypot(pt.x - alyssa.x, pt.y - alyssa.y) > 120 &&
+        Math.hypot(pt.x - anna.x, pt.y - anna.y) > 120 &&
         placed.every((o) => Math.hypot(pt.x - o.x, pt.y - o.y) > PERSON_SPACING);
       best = { u, v, ...pt };
       if (ok) break;
@@ -389,11 +395,12 @@ scatterPeople();
 
 /* ---------------------------------------------------------------------- */
 /* Scene state: world (the grid) -> cafe (inside Cafe Lumen)              */
-/*                               -> lab (the Wearables Lab) -> render     */
-/*                                  (the wearable's design rendering)     */
+/*                               -> lab (the Form Studio)                 */
+/*                               -> subtitles (Jamie's house)             */
 /* ---------------------------------------------------------------------- */
 
 const appEl = document.getElementById("app");
+const openLinkEl = document.getElementById("openLink");
 const enterPromptEl = document.getElementById("enterPrompt");
 let currentScene = "world";
 
@@ -401,6 +408,7 @@ function setScene(scene) {
   currentScene = scene;
   appEl.dataset.scene = scene;
   keys.clear();
+  openLinkEl.hidden = true;
   if (scene !== "world") {
     enterPromptEl.hidden = true;
     shownEntrance = null;
@@ -427,12 +435,12 @@ function resizeCanvas() {
 
   const oldWidth = WORLD.width;
   layoutWorld(viewW / viewH);
-  // Inside the cafe or lab Alyssa is in room coordinates; she's placed back
+  // Inside the cafe or lab Anna is in room coordinates; she's placed back
   // at the door on her way out, so only her position on the map is rescaled.
   if (currentScene === "world") {
-    alyssa.x *= WORLD.width / oldWidth;
-    const inside = buildings.find((b) => circleRectCollides(alyssa.x, alyssa.y, CHAR_RADIUS, b));
-    if (inside) alyssa.y = inside.y + inside.h + CHAR_RADIUS + 20;
+    anna.x *= WORLD.width / oldWidth;
+    const inside = buildings.find((b) => circleRectCollides(anna.x, anna.y, CHAR_RADIUS, b));
+    if (inside) anna.y = inside.y + inside.h + CHAR_RADIUS + 20;
   }
 
   canvas.width = Math.round(viewW * dpr);
@@ -445,7 +453,7 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 // Zoom: the page opens on an overview of the whole village filling the
-// window (`fitZoom`), and can zoom in to follow Alyssa up close.
+// window (`fitZoom`), and can zoom in to follow Anna up close.
 const FOLLOW_ZOOM = 1;
 const MAX_ZOOM = 1.6;
 let zoom = 1;
@@ -462,7 +470,7 @@ function fitZoom() {
   return Math.min(viewW / WORLD.width, viewH / WORLD.height);
 }
 
-// 0 in the full overview, 1 once zoomed in far enough to follow Alyssa.
+// 0 in the full overview, 1 once zoomed in far enough to follow Anna.
 function followAmount() {
   const fit = fitZoom();
   return clamp((zoom - fit) / (fit * 0.6), 0, 1);
@@ -480,8 +488,8 @@ function setZoom(value) {
 }
 
 function updateCamera(dt) {
-  // Hold still while Alyssa is being dragged, so she stays under the cursor.
-  if (draggingAlyssa) return;
+  // Hold still while Anna is being dragged, so she stays under the cursor.
+  if (draggingAnna) return;
   const fit = fitZoom();
   if (wantOverview) targetZoom = fit;
   targetZoom = clamp(targetZoom, fit, MAX_ZOOM);
@@ -492,12 +500,12 @@ function updateCamera(dt) {
   const ease = 1 - Math.exp(-dt * 5);
   zoom = Math.exp(Math.log(zoom) + (Math.log(targetZoom) - Math.log(zoom)) * ease);
 
-  // Blend between a camera that frames the whole map and one that follows Alyssa.
+  // Blend between a camera that frames the whole map and one that follows Anna.
   const visW = viewW / zoom, visH = viewH / zoom;
   const overviewX = WORLD.width / 2 - visW / 2;
   const overviewY = WORLD.height / 2 - visH / 2;
-  const followX = clamp(alyssa.x - visW / 2, 0, Math.max(0, WORLD.width - visW));
-  const followY = clamp(alyssa.y - visH / 2, 0, Math.max(0, WORLD.height - visH));
+  const followX = clamp(anna.x - visW / 2, 0, Math.max(0, WORLD.width - visW));
+  const followY = clamp(anna.y - visH / 2, 0, Math.max(0, WORLD.height - visH));
   const t = followAmount();
   cameraX = overviewX + (followX - overviewX) * t;
   cameraY = overviewY + (followY - overviewY) * t;
@@ -506,7 +514,7 @@ function updateCamera(dt) {
   const inOverview = wantOverview || targetZoom <= fit * 1.05;
   if (inOverview !== zoomToggleShowsOverview) {
     zoomToggleShowsOverview = inOverview;
-    zoomToggleEl.textContent = inOverview ? "Zoom in on Alyssa" : "View the whole map";
+    zoomToggleEl.textContent = inOverview ? "Zoom in on Anna" : "View the whole map";
   }
 }
 
@@ -543,24 +551,12 @@ const MOVE_KEYS = new Set([
 window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
 
-  // While the phone is up, keys only close it (and never move Alyssa).
-  if (phoneOpen) {
-    if (k === "e" || k === "enter" || k === "escape" || k === " ") {
-      e.preventDefault();
-      closePhone();
-    }
-    return;
-  }
-
   if (k === "escape") {
     if (currentScene === "cafe") leaveCafe();
     else if (currentScene === "lab") leaveLab();
     else if (currentScene === "subtitles") leaveSubs();
-    else if (currentScene === "render") setScene("lab");
     return;
   }
-
-  if (currentScene === "render") return;
 
   if (MOVE_KEYS.has(k)) {
     keys.add(k);
@@ -568,15 +564,37 @@ window.addEventListener("keydown", (e) => {
   }
 
   if (currentScene === "lab") {
-    if ((k === "e" || k === "enter") && nearPickup()) {
+    if ((k === "e" || k === "enter") && appPromptShowing) {
+      // The companion app opens in its own tab. Closing that tab brings
+      // Anna back to the studio, cuff on.
       e.preventDefault();
-      alyssa.hearingAid = HEARING_AID_COLOR;
-      openPhone();
+      appPromptShowing = false;
+      openInNewTab(COMPANION_APP_URL, "Open the Sunny Ears app");
+      return;
+    }
+    if ((k === "e" || k === "enter") && nearPickup()) {
+      // The cuff lifts off its stand and floats over onto Anna's ear.
+      e.preventDefault();
+      cuffFlight = { t: 0 };
       return;
     }
     if ((k === "e" || k === "enter") && nearFitter()) {
+      // The fitter shows Anna the product rendering, in its own tab. Closing
+      // that tab brings her back to the lab, right where she was.
       e.preventDefault();
-      setScene("render");
+      openInNewTab(PRODUCT_RENDERING_URL, "Open the product rendering");
+    }
+    return;
+  }
+  if (currentScene === "cafe") {
+    if (k === "e" || k === "enter") {
+      if (cafeSeated) {
+        e.preventDefault();
+        standUpFromChat();
+      } else if (nearChatTable()) {
+        e.preventDefault();
+        sitDownToChat();
+      }
     }
     return;
   }
@@ -592,7 +610,7 @@ window.addEventListener("keydown", (e) => {
   if (k === "+" || k === "=") setZoom(targetZoom * 1.35);
   if (k === "-" || k === "_") setZoom(targetZoom / 1.35);
 
-  const entrance = entranceNear(alyssa);
+  const entrance = entranceNear(anna);
   if ((k === "e" || k === "enter") && entrance) {
     e.preventDefault();
     enterBuilding(entrance);
@@ -610,35 +628,43 @@ window.addEventListener("blur", () => keys.clear());
 /* Character + world rendering                                            */
 /* ---------------------------------------------------------------------- */
 
-// A behind-the-ear hearing aid on an ear at (x, y): a curved body tucked
-// behind it (`out` is the direction away from the face), and a thin tube
-// over the top into the ear.
+// A Sunny Ears cuff on an ear at (x, y): a short, chunky, polished piece
+// clipped over the upper outer rim of the ear (`out` is the direction away
+// from the face), with a thin wire curving down from it into the ear. It
+// stays on the outer side of the ear, so it never crosses onto the cheek.
 function drawHearingAid(g, x, y, out, color) {
   g.save();
   g.lineCap = "round";
-  const tube = () => {
+  const cx = x + out * 0.4, cy = y - 0.3; // the rim of the ear, as an ellipse
+  const rimAt = (a) => ({ x: cx + Math.cos(a) * 2.1 * out, y: cy + Math.sin(a) * 3 });
+
+  // The wire, from the front of the cuff down into the ear
+  const start = rimAt(-Math.PI * 0.38);
+  g.beginPath();
+  g.moveTo(start.x, start.y);
+  g.quadraticCurveTo(x + out * 0.2, y - 1.6, x + out * 0.3, y + 0.8);
+  g.strokeStyle = "rgba(70,60,50,0.75)";
+  g.lineWidth = 0.35;
+  g.stroke();
+
+  // The cuff: a short, thick arc over the rim, with a glint on top
+  const seg = (width, style) => {
     g.beginPath();
-    g.moveTo(x + out * 3.4, y - 4.4);
-    g.quadraticCurveTo(x + out * 0.6, y - 7, x - out * 0.2, y - 1.2);
+    for (let i = 0; i <= 6; i++) {
+      const p = rimAt(-Math.PI * 0.38 + (i / 6) * Math.PI * 0.3);
+      if (i) g.lineTo(p.x, p.y);
+      else g.moveTo(p.x, p.y);
+    }
+    g.strokeStyle = style;
+    g.lineWidth = width;
+    g.stroke();
   };
-  tube();
-  g.strokeStyle = INK;
-  g.lineWidth = 2.2;
-  g.stroke();
-  tube();
-  g.strokeStyle = color;
-  g.lineWidth = 1.1;
-  g.stroke();
+  seg(1.8, INK);
+  seg(1.1, color);
+  const glint = rimAt(-Math.PI * 0.27);
   g.beginPath();
-  g.ellipse(x + out * 4.2, y - 0.4, 2.2, 4.6, out * 0.3, 0, Math.PI * 2);
-  g.fillStyle = color;
-  g.fill();
-  g.strokeStyle = INK;
-  g.lineWidth = 1.2;
-  g.stroke();
+  g.arc(glint.x - out * 0.15, glint.y - 0.15, 0.28, 0, Math.PI * 2);
   g.fillStyle = "rgba(255,255,255,0.85)";
-  g.beginPath();
-  g.arc(x + out * 4.4, y - 2.6, 0.8, 0, Math.PI * 2);
   g.fill();
   g.restore();
 }
@@ -710,31 +736,6 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
   g.ellipse(13, -1 - armSwing * 0.3, 4, 9, -0.15, 0, Math.PI * 2);
   g.fill();
   outline();
-
-  // Something carried in one hand: Jamie's bag, with the siren clip on it.
-  if (ch.carrying === "bag") {
-    const side = ch.facing === "left" ? -1 : 1;
-    const bx = side * 15, by = 6;
-    g.beginPath();
-    g.arc(bx, by - 1, 4.5, Math.PI, 0);
-    g.strokeStyle = INK;
-    g.lineWidth = 2.4;
-    g.stroke();
-    g.strokeStyle = "#c98a4f";
-    g.lineWidth = 1.1;
-    g.stroke();
-    roundRect(g, bx - 7.5, by - 1, 15, 13, 3);
-    g.fillStyle = "#e3b27a";
-    g.fill();
-    outline();
-    roundRect(g, bx - 3 + side * 2, by + 2, 6, 6, 1.6);
-    g.fillStyle = "#3e3226";
-    g.fill();
-    g.beginPath();
-    g.arc(bx + side * 2, by + 5, 1.5, 0, Math.PI * 2);
-    g.fillStyle = "#e0782a";
-    g.fill();
-  }
 
   // Medium-length hair sits behind the head and falls evenly to the jaw on
   // both sides, framing the face without covering it. The two sides stay
@@ -809,8 +810,9 @@ function drawCharacter(g, ch, cx, cy, scale, phase, moving) {
     g.stroke();
   }
 
-  // Hearing aids. Alyssa wears one on her right ear once she's picked it up;
-  // Jamie wears a pair (`hearingAidPair`). Side-on, it's on whichever ear we can see.
+  // Hearing cuffs. Anna wears a gold one on her right ear once she's picked
+  // it up; Jamie wears a pair (`hearingAidPair`). Side-on, it's on whichever
+  // ear we can see.
   if (ch.hearingAid && p.ears) {
     if (sideways) {
       const out = dir === "left" ? 1 : -1; // toward the back of the ear
@@ -870,8 +872,9 @@ function roundRect(g, x, y, w, h, r) {
 // A storybook shop: pitched shingle roof, arched upper windows, a striped
 // awning over framed shop windows, and a front door, all outlined in ink.
 function drawBuilding(g, b) {
-  if (b.style === "future") {
-    drawFutureStore(g, b);
+  const special = { spa: drawSpaStore, cafe: drawCafeStore, cottage: drawCottage }[b.style];
+  if (special) {
+    special(g, b);
     drawBuildingName(g, b);
     return;
   }
@@ -1083,7 +1086,31 @@ function drawBuilding(g, b) {
     g.fill();
   }
 
+  if (b.sign) drawHouseSign(g, b);
   drawBuildingName(g, b);
+}
+
+// A painted wooden sign on the front wall, between the roof and the door.
+function drawHouseSign(g, b) {
+  const cx = b.x + b.w / 2, cy = b.y + 40;
+  g.font = `600 13px "Cormorant Garamond", Georgia, serif`;
+  const sw = g.measureText(b.sign).width + 18, sh = 19;
+  g.fillStyle = "rgba(60,40,20,0.2)";
+  roundRect(g, cx - sw / 2 + 2, cy - sh / 2 + 3, sw, sh, 4);
+  g.fill();
+  roundRect(g, cx - sw / 2, cy - sh / 2, sw, sh, 4);
+  g.fillStyle = "#7a5236";
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 1.6;
+  g.stroke();
+  roundRect(g, cx - sw / 2 + 3, cy - sh / 2 + 3, sw - 6, sh - 6, 2.5);
+  g.fillStyle = "#fbf3e6";
+  g.fill();
+  g.fillStyle = "#4a3426";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(b.sign, cx, cy + 0.5);
 }
 
 function drawBuildingName(g, b) {
@@ -1100,235 +1127,742 @@ function drawBuildingName(g, b) {
   g.fillText(b.name, x + w / 2, y + h + 12 + 14 * k);
 }
 
-// A sleek showroom from the near future: curved metal canopy with a glowing
-// edge, a wall of glass showing off what's inside, and sliding glass doors.
-function drawFutureStore(g, b) {
+// A cozy, modern cafe front for the evening: a thin dark roof over warm wood
+// slats with a glowing round logo, a slim black canopy strung with festoon
+// lights, and big steel-framed windows glowing amber, with pendant lamps
+// and people chatting inside. Out front, a little terrace: bistro tables,
+// potted olive trees and a chalkboard sign.
+function drawCafeStore(g, b) {
   const { x, y, w, h } = b;
-  const glow = b.glow;
-  const pulse = 0.75 + 0.25 * Math.sin(animPhase * 2.4);
+  const breathe = 0.85 + 0.15 * Math.sin(animPhase * 1.1);
+  const dx = x + w / 2, ground = y + h;
   g.lineJoin = "round";
+  const outlined = (width = 2) => {
+    g.strokeStyle = INK;
+    g.lineWidth = width;
+    g.stroke();
+  };
 
-  // Shadow, and light spilling onto the grass from the glass front
+  // Shadow, and warm light spilling out onto the ground
   g.fillStyle = "rgba(60,40,20,0.18)";
-  roundRect(g, x - 4, y + 10, w + 12, h, 18);
+  roundRect(g, x - 4, y + 10, w + 12, h, 10);
   g.fill();
   g.save();
-  g.globalAlpha = 0.28 * pulse;
-  g.fillStyle = glow;
+  g.globalAlpha = 0.32 * breathe;
+  g.fillStyle = "#ffc879";
   g.beginPath();
-  g.ellipse(x + w / 2, y + h + 6, w * 0.55, 14, 0, 0, Math.PI * 2);
+  g.ellipse(dx, ground + 8, w * 0.48, 16, 0, 0, Math.PI * 2);
   g.fill();
   g.restore();
 
-  // Rooftop antenna with a blinking light
-  const ax = x + w - 34;
-  g.strokeStyle = INK;
-  g.lineWidth = 2;
-  g.beginPath();
-  g.moveTo(ax, y);
-  g.lineTo(ax, y - 34);
-  g.moveTo(ax - 8, y - 20);
-  g.lineTo(ax + 8, y - 20);
-  g.stroke();
-  const blink = Math.sin(animPhase * 4) > 0.2;
-  g.fillStyle = blink ? "#ff6b6b" : "#9b4a4a";
-  g.beginPath();
-  g.arc(ax, y - 37, 3.5, 0, Math.PI * 2);
+  // The building: charcoal below, warm wood slats above
+  const roofH = 14, bandBottom = y + 80;
+  roundRect(g, x, y + roofH - 4, w, h - roofH + 4, 6);
+  g.fillStyle = "#2f2a26";
   g.fill();
-  if (blink) {
-    g.fillStyle = "rgba(255,107,107,0.25)";
+  outlined(2.5);
+  g.fillStyle = "#a8744a";
+  g.fillRect(x + 2, y + roofH, w - 4, bandBottom - y - roofH);
+  g.fillStyle = "#8a5a38";
+  for (let sx = x + 6; sx < x + w - 4; sx += 9) g.fillRect(sx, y + roofH, 4, bandBottom - y - roofH);
+  g.beginPath();
+  g.rect(x + 2, y + roofH, w - 4, bandBottom - y - roofH);
+  outlined(1.5);
+
+  // The thin flat roof
+  roundRect(g, x - 8, y, w + 16, roofH, 4);
+  g.fillStyle = "#26211e";
+  g.fill();
+  outlined(2.5);
+
+  // A glowing round logo: a little cup of coffee, steaming
+  const lx = dx, ly = y + roofH + (bandBottom - y - roofH) / 2;
+  g.save();
+  g.shadowColor = "#ffc879";
+  g.shadowBlur = 14 * breathe;
+  g.beginPath();
+  g.arc(lx, ly, 22, 0, Math.PI * 2);
+  g.fillStyle = "#2a2420";
+  g.fill();
+  g.strokeStyle = "#ffd28f";
+  g.lineWidth = 2.5;
+  g.stroke();
+  g.restore();
+  g.beginPath();
+  g.arc(lx, ly, 22, 0, Math.PI * 2);
+  outlined(1.5);
+  g.strokeStyle = "#ffd28f";
+  g.lineWidth = 2;
+  g.lineCap = "round";
+  g.beginPath(); // the cup
+  g.moveTo(lx - 8, ly - 1);
+  g.lineTo(lx - 6, ly + 8);
+  g.lineTo(lx + 6, ly + 8);
+  g.lineTo(lx + 8, ly - 1);
+  g.closePath();
+  g.stroke();
+  g.beginPath(); // its handle
+  g.arc(lx + 9.5, ly + 3, 3, -Math.PI / 2, Math.PI / 2);
+  g.stroke();
+  for (let i = 0; i < 2; i++) { // steam
+    const sway = Math.sin(animPhase * 2 + i * 2) * 1.5;
     g.beginPath();
-    g.arc(ax, y - 37, 8, 0, Math.PI * 2);
+    g.moveTo(lx - 3 + i * 6, ly - 4);
+    g.quadraticCurveTo(lx - 6 + i * 6 + sway, ly - 9, lx - 3 + i * 6, ly - 14);
+    g.stroke();
+  }
+
+  // Big glowing windows, steel-framed, with the door in the middle
+  const glassTop = bandBottom + 10, glassBottom = ground - 4, doorW = 44;
+  const panes = [
+    { x: x + 14, w: dx - doorW / 2 - 8 - (x + 14) },
+    { x: dx + doorW / 2 + 8, w: x + w - 14 - (dx + doorW / 2 + 8) },
+  ];
+  const warm = g.createLinearGradient(0, glassTop, 0, glassBottom);
+  warm.addColorStop(0, "#ffd69a");
+  warm.addColorStop(1, "#e79a52");
+  panes.forEach((p, side) => {
+    roundRect(g, p.x, glassTop, p.w, glassBottom - glassTop, 3);
+    g.fillStyle = warm;
+    g.fill();
+    g.save();
+    roundRect(g, p.x, glassTop, p.w, glassBottom - glassTop, 3);
+    g.clip();
+    // Pendant lamps hanging inside
+    for (let k = 0; k < 3; k++) {
+      const px = p.x + p.w * (0.2 + k * 0.3);
+      const py = glassTop + 22 + (k % 2) * 6;
+      g.strokeStyle = "rgba(60,35,20,0.5)";
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(px, glassTop);
+      g.lineTo(px, py - 4);
+      g.stroke();
+      g.fillStyle = `rgba(255,248,225,${0.75 + 0.25 * Math.sin(animPhase * 1.6 + k + side)})`;
+      g.beginPath();
+      g.arc(px, py, 4.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    // People inside, chatting at a table, and a leafy plant
+    g.fillStyle = "rgba(70,40,28,0.55)";
+    const tx = p.x + p.w * (side ? 0.4 : 0.55), floor = glassBottom;
+    [-14, 14].forEach((o, n) => {
+      const bob = Math.sin(animPhase * 2.2 + n * 1.7 + side) * 0.8;
+      g.beginPath();
+      g.arc(tx + o, floor - 30 + bob, 6, 0, Math.PI * 2); // head
+      g.fill();
+      roundRect(g, tx + o - 8, floor - 24 + bob, 16, 24, 6); // shoulders
+      g.fill();
+    });
+    g.fillRect(tx - 9, floor - 18, 18, 3); // the table between them
+    g.fillStyle = "rgba(60,80,45,0.5)";
+    const plantX = side ? p.x + p.w - 14 : p.x + 12;
+    [[0, -16, 8], [-6, -24, 6], [6, -26, 6]].forEach(([ox, oy, r]) => {
+      g.beginPath();
+      g.ellipse(plantX + ox, floor + oy, r * 0.7, r, ox * 0.06, 0, Math.PI * 2);
+      g.fill();
+    });
+    // A soft reflection across the glass
+    g.fillStyle = "rgba(255,255,255,0.12)";
+    g.beginPath();
+    g.moveTo(p.x + p.w * 0.6, glassTop);
+    g.lineTo(p.x + p.w * 0.6 + 14, glassTop);
+    g.lineTo(p.x + p.w * 0.6 - 10, glassBottom);
+    g.lineTo(p.x + p.w * 0.6 - 24, glassBottom);
+    g.closePath();
+    g.fill();
+    g.restore();
+    // Black steel frame and mullions
+    roundRect(g, p.x, glassTop, p.w, glassBottom - glassTop, 3);
+    g.strokeStyle = "#1c1916";
+    g.lineWidth = 3;
+    g.stroke();
+    g.lineWidth = 2;
+    g.beginPath();
+    for (let m = 1; m < 3; m++) {
+      g.moveTo(p.x + (p.w * m) / 3, glassTop);
+      g.lineTo(p.x + (p.w * m) / 3, glassBottom);
+    }
+    g.stroke();
+  });
+
+  // The glass door, a touch brighter, with a long wooden handle
+  const doorTop = glassTop + 4;
+  roundRect(g, dx - doorW / 2, doorTop, doorW, ground - doorTop, 3);
+  g.fillStyle = "#ffe0ad";
+  g.fill();
+  g.strokeStyle = "#1c1916";
+  g.lineWidth = 3;
+  g.stroke();
+  roundRect(g, dx + 8, doorTop + 18, 4, 26, 2);
+  g.fillStyle = "#a8744a";
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.stroke();
+
+  // A slim black canopy over the windows, with little downlights under it
+  const canopyY = bandBottom + 2;
+  roundRect(g, x - 6, canopyY, w + 12, 7, 3);
+  g.fillStyle = "#1f1b18";
+  g.fill();
+  outlined(2);
+  for (let k = 0; k < 6; k++) {
+    const cx = x + 30 + k * ((w - 60) / 5);
+    g.fillStyle = "rgba(255,214,150,0.22)";
+    g.beginPath();
+    g.moveTo(cx - 3, canopyY + 7);
+    g.lineTo(cx + 3, canopyY + 7);
+    g.lineTo(cx + 10, canopyY + 26);
+    g.lineTo(cx - 10, canopyY + 26);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "#fff1cf";
+    g.fillRect(cx - 2, canopyY + 6, 4, 2);
+  }
+
+  // Festoon lights draped along the front of the canopy
+  const lights = [];
+  const anchors = [x - 4, x + w * 0.34, x + w * 0.66, x + w + 4];
+  g.strokeStyle = "#2a2420";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  for (let a = 0; a < anchors.length - 1; a++) {
+    const ax = anchors[a], bx = anchors[a + 1];
+    for (let i = 0; i <= 12; i++) {
+      const f = i / 12;
+      const px = ax + (bx - ax) * f, py = canopyY + 9 + Math.sin(f * Math.PI) * 10;
+      if (a === 0 && i === 0) g.moveTo(px, py);
+      else g.lineTo(px, py);
+      if (i % 3 === 1) lights.push({ x: px, y: py + 2.5 });
+    }
+  }
+  g.stroke();
+  lights.forEach((l, i) => {
+    const glow = 0.7 + 0.3 * Math.sin(animPhase * 2 + i * 1.3);
+    g.fillStyle = `rgba(255,200,110,${0.28 * glow})`;
+    g.beginPath();
+    g.arc(l.x, l.y, 6, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = `rgba(255,236,190,${0.85 + 0.15 * glow})`;
+    g.beginPath();
+    g.arc(l.x, l.y, 2.3, 0, Math.PI * 2);
+    g.fill();
+  });
+
+  // The terrace: bistro tables with a chair either side
+  [x + 66, x + w - 66].forEach((tx, n) => {
+    [-14, 14].forEach((o) => {
+      g.strokeStyle = "#1c1916";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(tx + o, ground + 4);
+      g.lineTo(tx + o, ground - 10);
+      g.lineTo(tx + o + (o > 0 ? 5 : -5), ground - 18);
+      g.stroke();
+    });
+    g.strokeStyle = "#1c1916";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(tx, ground + 4);
+    g.lineTo(tx, ground - 10);
+    g.stroke();
+    g.beginPath();
+    g.ellipse(tx, ground - 11, 12, 3.5, 0, 0, Math.PI * 2);
+    g.fillStyle = "#c9a27a";
+    g.fill();
+    outlined(1.4);
+    g.beginPath(); // a cup on the table
+    g.arc(tx + (n ? -4 : 4), ground - 13, 2.2, 0, Math.PI * 2);
+    g.fillStyle = "#f6efe2";
+    g.fill();
+  });
+
+  // Potted olive trees at the corners
+  [x + 10, x + w - 10].forEach((ox, n) => {
+    roundRect(g, ox - 8, ground - 14, 16, 16, 3);
+    g.fillStyle = "#3a3330";
+    g.fill();
+    outlined(1.5);
+    g.strokeStyle = "#5a4636";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(ox, ground - 14);
+    g.lineTo(ox + (n ? -2 : 2), ground - 32);
+    g.stroke();
+    const sway = Math.sin(animPhase * 1.2 + n) * 1;
+    [[0, -40, 11], [-7, -34, 7], [7, -33, 7]].forEach(([fx, fy, r]) => {
+      g.beginPath();
+      g.arc(ox + fx + sway, ground + fy, r, 0, Math.PI * 2);
+      g.fillStyle = "#8aa36a";
+      g.fill();
+      outlined(1.2);
+    });
+  });
+
+  // A chalkboard sign by the door
+  const cx = dx + doorW / 2 + 18;
+  g.beginPath();
+  g.moveTo(cx - 7, ground + 4);
+  g.lineTo(cx - 5, ground - 16);
+  g.lineTo(cx + 5, ground - 16);
+  g.lineTo(cx + 7, ground + 4);
+  g.closePath();
+  g.fillStyle = "#2b302c";
+  g.fill();
+  outlined(1.5);
+  g.strokeStyle = "rgba(255,248,230,0.75)";
+  g.lineWidth = 0.9;
+  g.beginPath();
+  [[-10, 4], [-6, 5], [-2, 3]].forEach(([yy, half]) => {
+    g.moveTo(cx - half, ground + yy);
+    g.lineTo(cx + half, ground + yy);
+  });
+  g.stroke();
+}
+
+// Jamie's cottage, straight out of a storybook: a round, golden thatched
+// roof with a little eyebrow window peeking out of it, a stone chimney,
+// cream walls on a stone base, shuttered windows with
+// heart cut-outs and flower boxes, roses climbing the corner, a round-topped
+// sage door with a lantern, and a white picket fence round a flower garden.
+function drawCottage(g, b) {
+  const { x, y, w, h } = b;
+  const ground = y + h, dx = x + w / 2;
+  g.lineJoin = "round";
+  g.lineCap = "round";
+  const outlined = (width = 2) => {
+    g.strokeStyle = INK;
+    g.lineWidth = width;
+    g.stroke();
+  };
+
+  // Shadow
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, x - 2, y + 30, w + 10, h - 26, 14);
+  g.fill();
+
+  // The stone chimney
+  const chX = x + w * 0.76;
+  roundRect(g, chX - 10, y - 20, 20, 40, 3);
+  g.fillStyle = "#b9ab98";
+  g.fill();
+  outlined(2);
+  g.fillStyle = "rgba(90,75,60,0.35)";
+  [[-6, -14, 8], [2, -6, 7], [-5, 2, 7], [3, 10, 6]].forEach(([ox, oy, sw]) => {
+    roundRect(g, chX + ox, y + oy, sw, 5, 2);
+    g.fill();
+  });
+  roundRect(g, chX - 12, y - 24, 24, 6, 2);
+  g.fillStyle = "#9c8e7c";
+  g.fill();
+  outlined(1.6);
+
+  // Walls: cream plaster on a stone base
+  const wallTop = y + 40;
+  roundRect(g, x + 6, wallTop, w - 12, ground - wallTop, 8);
+  g.fillStyle = "#fbf1de";
+  g.fill();
+  outlined(2.5);
+  g.save();
+  roundRect(g, x + 6, wallTop, w - 12, ground - wallTop, 8);
+  g.clip();
+  g.fillStyle = "#cbbca6";
+  g.fillRect(x, ground - 14, w, 14);
+  g.fillStyle = "#b3a38c";
+  for (let sx = x + 8, k = 0; sx < x + w - 6; sx += 14, k++) {
+    roundRect(g, sx + (k % 2) * 3, ground - 12 + (k % 2) * 4, 11, 6, 3);
+    g.fill();
+  }
+  g.restore();
+
+  // Shuttered windows with heart cut-outs, and flower boxes below
+  [x + 40, x + w - 40].forEach((wx, n) => {
+    const wy = wallTop + 34, ww = 24, wh = 24;
+    roundRect(g, wx - ww / 2, wy - wh / 2, ww, wh, 4);
+    g.fillStyle = "#ffe6b5";
+    g.fill();
+    outlined(2);
+    g.strokeStyle = "#a8744a";
+    g.lineWidth = 1.8;
+    g.beginPath();
+    g.moveTo(wx, wy - wh / 2);
+    g.lineTo(wx, wy + wh / 2);
+    g.moveTo(wx - ww / 2, wy);
+    g.lineTo(wx + ww / 2, wy);
+    g.stroke();
+    [-1, 1].forEach((side) => {
+      const sx = wx + side * (ww / 2 + 6);
+      roundRect(g, sx - 5, wy - wh / 2 - 1, 10, wh + 2, 2);
+      g.fillStyle = "#8fb7d6";
+      g.fill();
+      outlined(1.5);
+      // a little heart cut into each shutter
+      g.fillStyle = "#4f7795";
+      g.beginPath();
+      g.arc(sx - 1.2, wy - 3, 1.4, 0, Math.PI * 2);
+      g.arc(sx + 1.2, wy - 3, 1.4, 0, Math.PI * 2);
+      g.fill();
+      g.beginPath();
+      g.moveTo(sx - 2.6, wy - 2.6);
+      g.lineTo(sx, wy + 0.8);
+      g.lineTo(sx + 2.6, wy - 2.6);
+      g.closePath();
+      g.fill();
+    });
+    roundRect(g, wx - 16, wy + wh / 2 + 1, 32, 7, 2);
+    g.fillStyle = "#a8744a";
+    g.fill();
+    outlined(1.4);
+    ["#f29bb0", "#ffd166", "#f7f2ff", "#e8889a", "#ffd166"].forEach((c, i) => {
+      g.fillStyle = c;
+      g.beginPath();
+      g.arc(wx - 12 + i * 6, wy + wh / 2 + Math.sin(i * 2 + n) * 1.2, 2.6, 0, Math.PI * 2);
+      g.fill();
+    });
+  });
+
+  // The round-topped door, painted sage, with a little round window, a
+  // knob, a stone step and a lantern beside it
+  const doorW = 28, doorTop = ground - 46;
+  const door = () => {
+    g.beginPath();
+    g.moveTo(dx - doorW / 2, ground);
+    g.lineTo(dx - doorW / 2, doorTop + doorW / 2);
+    g.arc(dx, doorTop + doorW / 2, doorW / 2, Math.PI, 0);
+    g.lineTo(dx + doorW / 2, ground);
+    g.closePath();
+  };
+  door();
+  g.fillStyle = "#7fa07a";
+  g.fill();
+  outlined(2.2);
+  g.strokeStyle = "rgba(40,60,40,0.3)";
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(dx - 5, doorTop + 10);
+  g.lineTo(dx - 5, ground - 2);
+  g.moveTo(dx + 5, doorTop + 10);
+  g.lineTo(dx + 5, ground - 2);
+  g.stroke();
+  g.beginPath();
+  g.arc(dx, doorTop + 13, 5, 0, Math.PI * 2);
+  g.fillStyle = "#ffe6b5";
+  g.fill();
+  outlined(1.4);
+  g.beginPath();
+  g.arc(dx + 8, ground - 20, 1.8, 0, Math.PI * 2);
+  g.fillStyle = "#e0b04a";
+  g.fill();
+  roundRect(g, dx - 20, ground - 2, 40, 5, 2);
+  g.fillStyle = "#cbbca6";
+  g.fill();
+  outlined(1.4);
+  const lx = dx + doorW / 2 + 9, ly = ground - 34;
+  g.fillStyle = `rgba(255,214,140,${0.3 + 0.1 * Math.sin(animPhase * 2)})`;
+  g.beginPath();
+  g.arc(lx, ly, 8, 0, Math.PI * 2);
+  g.fill();
+  roundRect(g, lx - 3.5, ly - 5, 7, 10, 2);
+  g.fillStyle = "#ffe3a3";
+  g.fill();
+  outlined(1.2);
+
+  // Roses climbing the left corner
+  g.strokeStyle = "#5e8f3e";
+  g.lineWidth = 1.8;
+  g.beginPath();
+  g.moveTo(x + 12, ground - 2);
+  g.bezierCurveTo(x + 4, ground - 30, x + 22, ground - 50, x + 12, wallTop + 4);
+  g.stroke();
+  [[x + 9, ground - 16], [x + 13, ground - 32], [x + 15, ground - 48], [x + 11, wallTop + 10]].forEach(([rx, ry], i) => {
+    g.fillStyle = "#79ad4f";
+    g.beginPath();
+    g.ellipse(rx + (i % 2 ? -4 : 4), ry + 2, 3, 1.8, 0.5, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = i % 2 ? "#e8889a" : "#f29bb0";
+    g.beginPath();
+    g.arc(rx, ry, 3, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = "rgba(150,50,70,0.5)";
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.arc(rx, ry, 1.4, 0, Math.PI * 1.5);
+    g.stroke();
+  });
+
+  // The thatched roof: a big, soft, rounded mound of golden straw with a
+  // scalloped edge, overhanging the walls
+  const eaveY = wallTop + 8, left = x - 12, right = x + w + 12;
+  const roof = () => {
+    g.beginPath();
+    g.moveTo(left, eaveY);
+    g.bezierCurveTo(left - 4, y - 6, x + w * 0.28, y - 14, dx, y - 12);
+    g.bezierCurveTo(x + w * 0.72, y - 14, right + 4, y - 6, right, eaveY);
+    const bumps = 9;
+    for (let i = bumps; i > 0; i--) {
+      const bx0 = left + ((right - left) * i) / bumps;
+      const bx1 = left + ((right - left) * (i - 1)) / bumps;
+      g.quadraticCurveTo((bx0 + bx1) / 2, eaveY + 9, bx1, eaveY);
+    }
+    g.closePath();
+  };
+  roof();
+  const straw = g.createLinearGradient(0, y - 12, 0, eaveY + 8);
+  straw.addColorStop(0, "#e9bd6c");
+  straw.addColorStop(1, "#c98f45");
+  g.fillStyle = straw;
+  g.fill();
+  g.save();
+  roof();
+  g.clip();
+  g.strokeStyle = "rgba(140,90,40,0.35)";
+  g.lineWidth = 1.2;
+  for (let row = 0; row < 5; row++) {
+    const ry = y + row * 11;
+    for (let sx = left + (row % 2) * 7; sx < right; sx += 14) {
+      g.beginPath();
+      g.moveTo(sx, ry);
+      g.quadraticCurveTo(sx + 3, ry + 5, sx + 1, ry + 10);
+      g.stroke();
+    }
+  }
+  // A rounded ridge along the top
+  g.strokeStyle = "rgba(255,236,190,0.6)";
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(x + w * 0.12, y + 4);
+  g.quadraticCurveTo(dx, y - 16, x + w * 0.88, y + 4);
+  g.stroke();
+  g.restore();
+  roof();
+  outlined(2.5);
+
+  // The eyebrow window peeking out of the thatch
+  const ex = x + w * 0.32, ey = y + 18;
+  g.beginPath();
+  g.ellipse(ex, ey + 2, 20, 12, 0, Math.PI, 0);
+  g.fillStyle = "#d9a75a";
+  g.fill();
+  outlined(1.8);
+  g.beginPath();
+  g.arc(ex, ey + 6, 8, Math.PI, 0);
+  g.closePath();
+  g.fillStyle = "#ffe6b5";
+  g.fill();
+  outlined(1.6);
+  g.strokeStyle = "#a8744a";
+  g.lineWidth = 1.2;
+  g.beginPath();
+  g.moveTo(ex, ey - 2);
+  g.lineTo(ex, ey + 6);
+  g.stroke();
+
+  // A white picket fence round a little flower garden, either side of the path
+  [[x + 2, dx - 26], [dx + 26, x + w - 2]].forEach(([fx0, fx1], side) => {
+    const fy = ground + 4;
+    // flowers behind the fence
+    for (let fx = fx0 + 6; fx < fx1 - 2; fx += 9) {
+      g.fillStyle = "#6aa04a";
+      g.beginPath();
+      g.arc(fx, fy - 4, 4, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = ["#f29bb0", "#ffd166", "#b7a6f0", "#f7f2ff"][Math.round((fx - fx0) / 9 + side) % 4];
+      g.beginPath();
+      g.arc(fx + 1, fy - 7, 2.3, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.strokeStyle = INK;
+    g.lineWidth = 1.3;
+    g.fillStyle = "#fffaf0";
+    for (let px = fx0; px <= fx1; px += 8) {
+      g.beginPath();
+      g.moveTo(px - 2, fy + 4);
+      g.lineTo(px - 2, fy - 6);
+      g.lineTo(px, fy - 9);
+      g.lineTo(px + 2, fy - 6);
+      g.lineTo(px + 2, fy + 4);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    }
+    roundRect(g, fx0 - 2, fy - 3, fx1 - fx0 + 4, 3, 1);
+    g.fill();
+    g.stroke();
+  });
+}
+
+// A modern spa pavilion: warm plaster walls under a thin flat roof planted
+// with moss, timber slat screens with lamplight glowing through the gaps, a
+// tall arched glass doorway, and grasses and smooth stones along the front.
+// A wisp of steam drifts up off the roof.
+function drawSpaStore(g, b) {
+  const { x, y, w, h } = b;
+  const glow = b.glow;
+  const breathe = 0.85 + 0.15 * Math.sin(animPhase * 1.2);
+  g.lineJoin = "round";
+
+  // Shadow, and warm light spilling onto the grass from the doorway
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, x - 4, y + 10, w + 12, h, 12);
+  g.fill();
+  g.save();
+  g.globalAlpha = 0.3 * breathe;
+  g.fillStyle = glow;
+  g.beginPath();
+  g.ellipse(x + w / 2, y + h + 6, w * 0.3, 12, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+
+  // Steam curling up off the roof
+  for (let i = 0; i < 4; i++) {
+    const ph = (animPhase * 0.18 + i / 4) % 1;
+    g.fillStyle = `rgba(255,255,255,${0.45 * Math.sin(ph * Math.PI)})`;
+    g.beginPath();
+    g.arc(x + w * 0.78 + Math.sin(ph * 5 + i) * 6, y - 4 - ph * 46, 5 + ph * 9, 0, Math.PI * 2);
     g.fill();
   }
 
-  // Walls: brushed pale metal with soft rounded corners
-  const wall = g.createLinearGradient(x, y, x + w, y + h);
-  wall.addColorStop(0, "#f4f7f9");
-  wall.addColorStop(1, "#d9e1e7");
+  // Walls: warm, softly shaded plaster
+  const roofH = 18;
+  const wallTop = y + roofH - 4;
+  const wall = g.createLinearGradient(0, wallTop, 0, y + h);
+  wall.addColorStop(0, "#f3e9da");
+  wall.addColorStop(1, "#e4d3bb");
   g.fillStyle = wall;
-  roundRect(g, x, y, w, h, 18);
+  roundRect(g, x, wallTop, w, y + h - wallTop, 8);
   g.fill();
   g.strokeStyle = INK;
   g.lineWidth = 2.5;
   g.stroke();
 
-  // Upper floor: a ribbed slate band with a light strip running through it
-  const bandTop = y + 14;
-  const bandH = h >= 140 ? 44 : 0;
-  if (bandH) {
-    g.fillStyle = "#34404c";
-    roundRect(g, x + 14, bandTop, w - 28, bandH, 10);
+  // Timber slat screens either side, lit from behind
+  const slatW = w * 0.3;
+  const slatTop = wallTop + 16, slatH = y + h - slatTop - 14;
+  [x + 16, x + w - 16 - slatW].forEach((sx) => {
+    const light = g.createLinearGradient(0, slatTop, 0, slatTop + slatH);
+    light.addColorStop(0, "#f7c98a");
+    light.addColorStop(1, "#e9a660");
+    g.fillStyle = light;
+    roundRect(g, sx, slatTop, slatW, slatH, 4);
     g.fill();
+    g.save();
+    g.globalAlpha = 0.25 + 0.15 * breathe;
+    g.fillStyle = "#fff4dc";
+    roundRect(g, sx, slatTop, slatW, slatH, 4);
+    g.fill();
+    g.restore();
+    g.fillStyle = "#9a6a43";
+    for (let sx2 = sx + 2; sx2 < sx + slatW - 2; sx2 += 8) {
+      g.fillRect(sx2, slatTop, 5, slatH);
+    }
+    roundRect(g, sx, slatTop, slatW, slatH, 4);
     g.strokeStyle = INK;
     g.lineWidth = 2;
     g.stroke();
-    g.save();
-    roundRect(g, x + 14, bandTop, w - 28, bandH, 10);
-    g.clip();
-    g.strokeStyle = "rgba(255,255,255,0.08)";
-    g.lineWidth = 3;
-    g.beginPath();
-    for (let rx = x + 22; rx < x + w - 14; rx += 12) {
-      g.moveTo(rx, bandTop);
-      g.lineTo(rx, bandTop + bandH);
-    }
-    g.stroke();
-    // A bright sweep that glides along the strip
-    const stripY = bandTop + bandH / 2;
-    const sweep = x + 14 + ((animPhase * 90) % (w - 28));
-    const strip = g.createLinearGradient(sweep - 60, 0, sweep + 60, 0);
-    strip.addColorStop(0, glow);
-    strip.addColorStop(0.5, "#ffffff");
-    strip.addColorStop(1, glow);
-    g.fillStyle = glow;
-    g.fillRect(x + 14, stripY - 2, w - 28, 4);
-    g.fillStyle = strip;
-    g.fillRect(sweep - 60, stripY - 2, 120, 4);
-    g.restore();
-  }
+  });
 
-  // Curved canopy over the storefront, its underside edged in light
-  const canopyY = bandH ? bandTop + bandH + 12 : y + 12;
-  g.fillStyle = "#2c3640";
-  g.beginPath();
-  g.moveTo(x - 10, canopyY + 10);
-  g.quadraticCurveTo(x + w / 2, canopyY - 10, x + w + 10, canopyY + 10);
-  g.lineTo(x + w + 10, canopyY + 18);
-  g.quadraticCurveTo(x + w / 2, canopyY, x - 10, canopyY + 18);
-  g.closePath();
+  // The thin flat roof, its edge in dark timber, with moss growing on top
+  roundRect(g, x - 12, y, w + 24, roofH, 5);
+  g.fillStyle = "#4a3a2c";
   g.fill();
   g.strokeStyle = INK;
-  g.lineWidth = 2;
-  g.stroke();
-  g.save();
-  g.shadowColor = glow;
-  g.shadowBlur = 12 * pulse;
-  g.strokeStyle = glow;
   g.lineWidth = 2.5;
-  g.beginPath();
-  g.moveTo(x - 6, canopyY + 17);
-  g.quadraticCurveTo(x + w / 2, canopyY + 1, x + w + 6, canopyY + 17);
   g.stroke();
-  g.restore();
-
-  // Glass storefront
-  const gx = x + 14, gy = canopyY + 22, gw = w - 28, gh = y + h - gy - 4;
-  const glass = g.createLinearGradient(0, gy, 0, gy + gh);
-  glass.addColorStop(0, "#1f2b36");
-  glass.addColorStop(1, "#2f4150");
-  g.fillStyle = glass;
-  roundRect(g, gx, gy, gw, gh, 8);
+  roundRect(g, x - 6, y + 2, w + 12, 7, 3.5);
+  g.fillStyle = "#7f9d5a";
   g.fill();
-  g.save();
-  roundRect(g, gx, gy, gw, gh, 8);
-  g.clip();
-
-  // What's on display inside
-  const doorW = 40;
-  const sideW = (gw - doorW) / 2;
-  if (b.display === "gadgets") {
-    // Glowing pedestals, each with a little ear-worn gadget floating above
-    [0.3, 0.72].forEach((f) => {
-      [sideW * f, gw - sideW * f].forEach((ox, i) => {
-        const px = gx + ox;
-        const py = gy + gh - 4;
-        const bob = Math.sin(animPhase * 2 + ox) * 2;
-        g.fillStyle = "#e8eef2";
-        roundRect(g, px - 9, py - 20, 18, 20, 3);
-        g.fill();
-        g.fillStyle = glow;
-        g.fillRect(px - 9, py - 20, 18, 2.5);
-        g.save();
-        g.shadowColor = glow;
-        g.shadowBlur = 10;
-        g.strokeStyle = i ? "#f6f3ea" : glow;
-        g.lineWidth = 3;
-        g.lineCap = "round";
-        g.beginPath();
-        g.arc(px, py - 32 + bob, 6, Math.PI * 0.7, Math.PI * 2.1);
-        g.stroke();
-        g.restore();
-      });
-    });
-  } else if (b.display === "captions") {
-    // Caption bars drifting up the glass, like subtitles on the world
-    const lines = [0.62, 0.4, 0.82];
-    [[gx + 6, sideW - 12], [gx + sideW + doorW + 6, sideW - 12]].forEach(([cx, cw], side) => {
-      const span = Math.max(20, gh - 10);
-      for (let i = 0; i < 3; i++) {
-        const drift = (animPhase * 8 + (i * span) / 3 + side * 7) % span;
-        const by = gy + gh - 12 - drift;
-        g.globalAlpha = Math.min(1, drift / 8, (span - drift) / 8);
-        g.fillStyle = "rgba(10,14,20,0.85)";
-        roundRect(g, cx, by, cw, 8, 3);
-        g.fill();
-        g.fillStyle = i === 0 ? glow : "#f6f3ea";
-        roundRect(g, cx + 4, by + 3, (cw - 8) * lines[i], 2, 1);
-        g.fill();
-      }
-      g.globalAlpha = 1;
-    });
+  g.fillStyle = "#9cbd6e";
+  for (let k = 0; k < 18; k++) {
+    const mx = x + 4 + (k / 17) * (w - 8);
+    g.beginPath();
+    g.arc(mx, y + 3 + (k % 3), 3 + (k % 2), Math.PI, 0);
+    g.fill();
   }
 
-  // Reflections sliding across the glass
-  g.fillStyle = "rgba(255,255,255,0.12)";
-  [0, 0.45].forEach((off) => {
-    const rx = gx + ((off * gw + animPhase * 12) % (gw + 60)) - 30;
+  // A tall arched glass doorway, glowing warm from inside
+  const doorW = 58;
+  const dx = x + w / 2, dy = y + h;
+  const archTop = wallTop + 12;
+  const arch = () => {
     g.beginPath();
-    g.moveTo(rx, gy + gh);
-    g.lineTo(rx + 26, gy);
-    g.lineTo(rx + 40, gy);
-    g.lineTo(rx + 14, gy + gh);
+    g.moveTo(dx - doorW / 2, dy);
+    g.lineTo(dx - doorW / 2, archTop + doorW / 2);
+    g.arc(dx, archTop + doorW / 2, doorW / 2, Math.PI, 0);
+    g.lineTo(dx + doorW / 2, dy);
     g.closePath();
+  };
+  const inside = g.createLinearGradient(0, archTop, 0, dy);
+  inside.addColorStop(0, "#ffe6b8");
+  inside.addColorStop(1, "#f2b46c");
+  arch();
+  g.fillStyle = inside;
+  g.fill();
+  // A leafy plant silhouetted inside, and a soft pendant light
+  g.save();
+  arch();
+  g.clip();
+  g.fillStyle = "rgba(255,255,255,0.5)";
+  g.beginPath();
+  g.arc(dx + 10, archTop + 26, 5 * breathe, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(90,110,70,0.55)";
+  [[-14, dy - 16, 11], [-6, dy - 26, 9], [-20, dy - 28, 8]].forEach(([ox, py, r]) => {
+    g.beginPath();
+    g.ellipse(dx + ox, py, r * 0.6, r, ox * 0.04, 0, Math.PI * 2);
     g.fill();
   });
   g.restore();
-
-  // The glass outline
-  roundRect(g, gx, gy, gw, gh, 8);
+  arch();
+  g.strokeStyle = "#b8925a";
+  g.lineWidth = 3;
+  g.stroke();
+  arch();
   g.strokeStyle = INK;
-  g.lineWidth = 2;
+  g.lineWidth = 1.5;
+  g.stroke();
+  g.strokeStyle = "rgba(184,146,90,0.9)";
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.moveTo(dx, archTop + doorW / 2);
+  g.lineTo(dx, dy - 2);
   g.stroke();
 
-  // Sliding glass double doors, lit from within, on a glowing threshold
-  if (b.door) {
-    const dx = x + w / 2, dy = y + h;
-    const doorTop = Math.max(gy + 4, dy - 50);
-    g.fillStyle = "#3b5060";
-    roundRect(g, dx - doorW / 2, doorTop, doorW, dy - doorTop - 2, 5);
-    g.fill();
-    g.save();
-    g.globalAlpha = 0.4 * pulse;
-    g.fillStyle = glow;
-    roundRect(g, dx - doorW / 2 + 3, doorTop + 3, doorW - 6, dy - doorTop - 8, 3);
-    g.fill();
-    g.restore();
-    g.strokeStyle = "#c9d3da";
-    g.lineWidth = 2;
-    roundRect(g, dx - doorW / 2, doorTop, doorW, dy - doorTop - 2, 5);
-    g.stroke();
+  // Grasses and smooth stones along the front of the building
+  const stones = [[x + 22, 7], [x + 36, 5], [x + w - 30, 7], [x + w - 46, 4.5]];
+  [x + 50, x + 66, x + w - 64, x + w - 80].forEach((gx, k) => {
+    g.strokeStyle = k % 2 ? "#8fae68" : "#a9c47c";
+    g.lineWidth = 1.6;
+    g.lineCap = "round";
+    for (let blade = -2; blade <= 2; blade++) {
+      const sway = Math.sin(animPhase * 1.3 + k + blade) * 1.5;
+      g.beginPath();
+      g.moveTo(gx + blade * 1.5, dy + 2);
+      g.quadraticCurveTo(gx + blade * 3, dy - 8, gx + blade * 5 + sway, dy - 16 + Math.abs(blade) * 2);
+      g.stroke();
+    }
+  });
+  stones.forEach(([sx, r]) => {
     g.beginPath();
-    g.moveTo(dx, doorTop + 2);
-    g.lineTo(dx, dy - 4);
-    g.stroke();
-    // Door handles
-    g.strokeStyle = "#f6f3ea";
-    g.beginPath();
-    g.moveTo(dx - 4, dy - 26);
-    g.lineTo(dx - 4, dy - 16);
-    g.moveTo(dx + 4, dy - 26);
-    g.lineTo(dx + 4, dy - 16);
-    g.stroke();
-    // Threshold
-    g.save();
-    g.shadowColor = glow;
-    g.shadowBlur = 10 * pulse;
-    g.fillStyle = glow;
-    roundRect(g, dx - 26, dy - 3, 52, 5, 2.5);
+    g.ellipse(sx, dy + 1, r * 1.3, r, 0, 0, Math.PI * 2);
+    g.fillStyle = "#cfc6b8";
     g.fill();
-    g.restore();
-  }
+    g.strokeStyle = INK;
+    g.lineWidth = 1.4;
+    g.stroke();
+    g.fillStyle = "rgba(255,255,255,0.5)";
+    g.beginPath();
+    g.ellipse(sx - r * 0.4, dy - r * 0.35, r * 0.45, r * 0.25, -0.3, 0, Math.PI * 2);
+    g.fill();
+  });
+
+  // A stone step up to the door
+  roundRect(g, dx - 34, dy - 3, 68, 7, 3);
+  g.fillStyle = "#d9cfc0";
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 1.5;
+  g.stroke();
 }
 
 function circleRectCollides(cx, cy, r, rect) {
@@ -1881,7 +2415,7 @@ function drawStreetSign(g, sign) {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Where is Alyssa? Areas, entrances, and the HUD                         */
+/* Where is Anna? Areas, entrances, and the HUD                         */
 /* ---------------------------------------------------------------------- */
 
 function areaAt(x, y) {
@@ -1929,16 +2463,16 @@ function buildingAtScreenPoint(clientX, clientY) {
   );
 }
 
-/* For now, Alyssa can also be moved with the mouse: drag her anywhere, or  */
+/* For now, Anna can also be moved with the mouse: drag her anywhere, or  */
 /* click an open spot on the map to put her there.                         */
 
-let draggingAlyssa = false;
+let draggingAnna = false;
 let suppressClick = false;
 
-function alyssaAtScreenPoint(clientX, clientY) {
+function annaAtScreenPoint(clientX, clientY) {
   const p = worldPointAt(clientX, clientY);
   const s = 1.4 * labelScale(2, 0.55); // the scale she's drawn at
-  return Math.abs(p.x - alyssa.x) < 20 * s && p.y > alyssa.y - 52 * s && p.y < alyssa.y + 8 * s;
+  return Math.abs(p.x - anna.x) < 20 * s && p.y > anna.y - 52 * s && p.y < anna.y + 8 * s;
 }
 
 // The nearest spot to (x, y) where she isn't inside a building, tree or the sea.
@@ -1956,17 +2490,17 @@ function openSpotNear(x, y) {
   return { x, y };
 }
 
-function placeAlyssa(clientX, clientY) {
+function placeAnna(clientX, clientY) {
   const p = worldPointAt(clientX, clientY);
-  Object.assign(alyssa, openSpotNear(p.x, p.y));
-  alyssa.moving = false;
+  Object.assign(anna, openSpotNear(p.x, p.y));
+  anna.moving = false;
   seedCompanion(-34, 4);
 }
 
 canvas.addEventListener("pointerdown", (e) => {
   suppressClick = false;
-  if (currentScene !== "world" || !alyssaAtScreenPoint(e.clientX, e.clientY)) return;
-  draggingAlyssa = true;
+  if (currentScene !== "world" || !annaAtScreenPoint(e.clientX, e.clientY)) return;
+  draggingAnna = true;
   try {
     canvas.setPointerCapture(e.pointerId); // keep the drag going if the cursor leaves the window
   } catch (err) {}
@@ -1974,10 +2508,10 @@ canvas.addEventListener("pointerdown", (e) => {
 });
 
 canvas.addEventListener("pointerup", (e) => {
-  if (!draggingAlyssa) return;
-  draggingAlyssa = false;
+  if (!draggingAnna) return;
+  draggingAnna = false;
   suppressClick = true; // the click that ends a drag shouldn't also place her or enter a shop
-  placeAlyssa(e.clientX, e.clientY);
+  placeAnna(e.clientX, e.clientY);
   canvas.style.cursor = "grab";
 });
 
@@ -1989,18 +2523,18 @@ canvas.addEventListener("click", (e) => {
   }
   const b = buildingAtScreenPoint(e.clientX, e.clientY);
   if (b) enterBuilding(b);
-  else placeAlyssa(e.clientX, e.clientY);
+  else placeAnna(e.clientX, e.clientY);
 });
 
 canvas.addEventListener("pointermove", (e) => {
   if (currentScene !== "world") return;
-  if (draggingAlyssa) {
+  if (draggingAnna) {
     const p = worldPointAt(e.clientX, e.clientY);
-    alyssa.x = clamp(p.x, CHAR_RADIUS, WORLD.width - CHAR_RADIUS);
-    alyssa.y = clamp(p.y, CHAR_RADIUS, WORLD.height - CHAR_RADIUS);
+    anna.x = clamp(p.x, CHAR_RADIUS, WORLD.width - CHAR_RADIUS);
+    anna.y = clamp(p.y, CHAR_RADIUS, WORLD.height - CHAR_RADIUS);
     return;
   }
-  canvas.style.cursor = alyssaAtScreenPoint(e.clientX, e.clientY)
+  canvas.style.cursor = annaAtScreenPoint(e.clientX, e.clientY)
     ? "grab"
     : buildingAtScreenPoint(e.clientX, e.clientY) ? "pointer" : "default";
 });
@@ -2011,7 +2545,7 @@ const minimapDotEl = document.getElementById("minimapDot");
 const minimapMapEl = document.getElementById("minimapMap");
 
 // A tiny copy of the map: the sea, the beach, and the Z path, with each
-// stretch lit up in its colour while Alyssa walks it.
+// stretch lit up in its colour while Anna walks it.
 function buildMinimap() {
   const W = WORLD.width, H = WORLD.height;
   const line = (pts, leg) =>
@@ -2044,13 +2578,13 @@ buildMinimap();
 window.addEventListener("resize", buildMinimap);
 
 function updateArea() {
-  const area = areaAt(alyssa.x, alyssa.y);
+  const area = areaAt(anna.x, anna.y);
   if (area === currentArea) return;
   currentArea = area;
 
   highlightMinimap(area);
 
-  // Announce each new stretch as Alyssa walks onto it (not needed in the
+  // Announce each new stretch as Anna walks onto it (not needed in the
   // overview, where the whole path is already on screen).
   if (followAmount() < 0.5) return;
   areaBannerEl.innerHTML = `
@@ -2066,7 +2600,7 @@ function updateArea() {
 let shownEntrance = null;
 
 function updateEnterPrompt() {
-  const entrance = entranceNear(alyssa);
+  const entrance = entranceNear(anna);
   if (entrance !== shownEntrance) {
     shownEntrance = entrance;
     enterPromptEl.hidden = !entrance;
@@ -2080,34 +2614,45 @@ function updateEnterPrompt() {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Lab scene: inside the Wearables Lab, a calm spa-like showroom of       */
-/* wearable ear gadgets. A fitter in the middle helps Alyssa try hers on. */
+/* Lab scene: inside the Form Studio, a cozy, dimly lit lounge with      */
+/* wearable ear gadgets on display. A fitter waits in the round sofa in   */
+/* the middle to help Anna try hers on.                                 */
 /* ---------------------------------------------------------------------- */
 
 const LAB = { w: 900, h: 640, wall: 26, doorX: 450, doorW: 76 };
 const LAB_BOUNDS = { width: LAB.w, height: LAB.h };
 const LAB_MOVE_SPEED = 150;
 
-// The fitting platform in the middle of the room, with the fitter on it.
+// The lounge in the middle of the room: a round sofa, open toward the door,
+// with the fitter waiting inside it.
 const labPlatform = { x: 450, y: 300, r: 112 };
+const LAB_SOFA = { inner: 96, outer: 124, from: Math.PI * 0.85, to: Math.PI * 2.15 };
 const labFitter = {
   x: 450, y: 282, facing: "down",
-  palette: { skin: "#b97a56", hair: "#2a211c", hairStyle: "medium", outfit: "#9cc3e0", outfitTrim: "#e07a2f" },
+  palette: { skin: "#b97a56", hair: "#2a211c", hairStyle: "medium", outfit: "#d9a441", outfitTrim: "#f4ecd8" },
 };
 const labTray = { x: 512, y: 300, r: 17 }; // the wearable waiting to be tried on
-const labMirror = { x: 385, y: 164, w: 130, h: 14 };
 const FITTER_REACH = 86;
+const PRODUCT_RENDERING_URL = "https://sunny.dabble.team/"; // what the fitter shows Anna
+const COMPANION_APP_URL = "https://sunny-ears.replit.app"; // opens when Anna picks up her cuff
 
-// Gadgets on display: pedestals along the side walls and a backlit shelf along the top.
+// The sofa's collision: a ring of small boxes along its arc.
+const labSofaBoxes = [];
+for (let a = LAB_SOFA.from; a <= LAB_SOFA.to + 0.01; a += 0.12) {
+  const r = (LAB_SOFA.inner + LAB_SOFA.outer) / 2;
+  labSofaBoxes.push({ x: labPlatform.x + Math.cos(a) * r - 13, y: labPlatform.y + Math.sin(a) * r - 13, w: 26, h: 26 });
+}
+
+// Gadgets on display: stone plinths along the side walls and lit niches along the top.
 const GADGET_COLORS = ["#e07a2f", "#4f86b8", "#f2b36b", "#8fc1e3", "#c95f1f", "#23384d"];
 const labPedestals = [180, 320, 460].flatMap((y, i) => [
   { x: 92, y, color: GADGET_COLORS[i] },
   { x: 808, y, color: GADGET_COLORS[i + 3] },
 ]);
-// The one gadget Alyssa can take with her: the blue one on the top-right
-// stand. Once picked up, she wears it as a hearing aid everywhere she goes.
+// The one cuff Anna can take with her: the gold one on the top-right
+// stand. Once picked up, she wears it on her ear everywhere she goes.
 const labPickup = labPedestals.find((p) => p.x > LAB.w / 2 && p.y === 180);
-const HEARING_AID_COLOR = "#3f8fd6";
+const HEARING_AID_COLOR = "#d9ab4a"; // gold, like the cuff on sunny.dabble.team
 labPickup.color = HEARING_AID_COLOR;
 const PICKUP_REACH = 74;
 const labShelf = { x: 250, y: 34, w: 400, h: 44 };
@@ -2115,6 +2660,21 @@ const labBasin = { x: 170, y: 548, r: 50 };
 const labLoungers = [
   { x: 650, y: 510, w: 44, h: 86 },
   { x: 720, y: 510, w: 44, h: 86 },
+];
+const labTeaTable = { x: 707, y: 488, r: 15 };
+
+// Two shoppers by the middle stand on the left wall, thinking about buying
+// the cuff on it.
+const labShopperStand = labPedestals.find((p) => p.x < LAB.w / 2 && p.y === 320);
+const labShoppers = [
+  {
+    x: labShopperStand.x + 60, y: labShopperStand.y - 34, facing: "left",
+    palette: { skin: "#e8b98a", hair: "#5a3a26", hairStyle: "bun", ears: true, outfit: "#c46a3f", outfitTrim: "#f4ecd8" },
+  },
+  {
+    x: labShopperStand.x + 66, y: labShopperStand.y + 34, facing: "left",
+    palette: { skin: "#8d5a3b", hair: "#1d1713", hairStyle: "short", ears: true, outfit: "#5f8b88", outfitTrim: "#e1efe9" },
+  },
 ];
 const labPlants = [{ x: 60, y: 60 }, { x: 840, y: 60 }, { x: 60, y: 590 }, { x: 840, y: 590 }];
 
@@ -2127,12 +2687,14 @@ const labObstacles = [
     x: LAB.doorX + LAB.doorW / 2, y: LAB.h - LAB.wall,
     w: LAB.w - (LAB.doorX + LAB.doorW / 2), h: LAB.wall,
   },
-  labShelf, labMirror, ...labLoungers,
+  labShelf, ...labLoungers, ...labSofaBoxes,
+  circleBox(labTeaTable),
   { x: labFitter.x - 16, y: labFitter.y - 20, w: 32, h: 36 },
   circleBox(labTray),
   circleBox(labBasin),
   ...labPedestals.map((p) => ({ x: p.x - 28, y: p.y - 28, w: 56, h: 56 })),
   ...labPlants.map((p) => circleBox(p, 15)),
+  ...labShoppers.map((p) => ({ x: p.x - 13, y: p.y - 10, w: 26, h: 26 })),
 ];
 
 const labCanvas = document.getElementById("labCanvas");
@@ -2154,106 +2716,164 @@ window.addEventListener("resize", resizeLabCanvas);
 resizeLabCanvas();
 
 function enterLab() {
-  alyssa.x = LAB.doorX;
-  alyssa.y = LAB.h - LAB.wall - 26;
-  alyssa.facing = "up";
-  alyssa.moving = false;
+  anna.x = LAB.doorX;
+  anna.y = LAB.h - LAB.wall - 26;
+  anna.facing = "up";
+  anna.moving = false;
   seedCompanion(-34, 4);
   setScene("lab");
 }
 
 function leaveLab() {
   const door = doorOf(labBuilding);
-  alyssa.x = door.x;
-  alyssa.y = door.y + CHAR_RADIUS + 18;
-  alyssa.facing = "down";
-  alyssa.moving = false;
+  anna.x = door.x;
+  anna.y = door.y + CHAR_RADIUS + 18;
+  anna.facing = "down";
+  anna.moving = false;
   seedCompanion(32, 2);
   labPromptEl.hidden = true;
+  // Walking out with her cuff on, the afternoon has turned to early evening.
+  if (anna.hearingAid) eveningTarget = Math.max(eveningTarget, EARLY_EVENING);
   setScene("world");
 }
 
+// Opens one of the Sunny Ears sites in a new tab. Some browsers block tabs
+// opened from a key press, so if this one's blocked, a button to open it
+// with a click shows up instead (until the scene changes).
+function openInNewTab(url, label) {
+  const tab = window.open(url, "_blank");
+  if (tab) {
+    tab.opener = null;
+    openLinkEl.hidden = true;
+    return;
+  }
+  openLinkEl.href = url;
+  openLinkEl.textContent = `${label} ↗`;
+  openLinkEl.hidden = false;
+}
+
+openLinkEl.addEventListener("click", () => {
+  openLinkEl.hidden = true;
+});
+
 function nearFitter() {
-  return Math.hypot(alyssa.x - labFitter.x, alyssa.y - labFitter.y) < FITTER_REACH;
+  return Math.hypot(anna.x - labFitter.x, anna.y - labFitter.y) < FITTER_REACH;
 }
 
 function nearPickup() {
-  return !alyssa.hearingAid && Math.hypot(alyssa.x - labPickup.x, alyssa.y - labPickup.y) < PICKUP_REACH;
+  return !anna.hearingAid && !cuffFlight && Math.hypot(anna.x - labPickup.x, anna.y - labPickup.y) < PICKUP_REACH;
 }
 
 const labPromptTitleEl = labPromptEl.querySelector(".lab-prompt-title");
+const labPromptKeyEl = labPromptEl.querySelector(".lab-prompt-key");
 
-// The phone that pops up once Alyssa has her hearing aid, welcoming her to
-// the app that keeps track of her data.
-const phonePopupEl = document.getElementById("phonePopup");
-const phoneCloseEl = document.getElementById("phoneClose");
-let phoneOpen = false;
+// Picking up the cuff: it lifts off the stand and floats in an arc onto
+// Anna's ear (`t` runs 0 -> 1). Once it's on, a pop-up offers the app.
+const CUFF_FLIGHT_SECONDS = 1.3;
+let cuffFlight = null;
+let appPromptShowing = false;
 
-function openPhone() {
-  phoneOpen = true;
-  keys.clear();
-  alyssa.moving = false;
-  labPromptEl.hidden = true;
-  phonePopupEl.hidden = false;
-  phoneCloseEl.focus();
+// Where the ear wearing the cuff is, in room coordinates, for a character
+// drawn at `scale` (the same spot drawCharacter puts the cuff).
+function cuffEarPoint(ch, scale) {
+  const sideways = ch.facing === "left" || ch.facing === "right";
+  const ex = sideways ? (ch.facing === "left" ? 7 : -7) : (ch.facing === "up" ? 10.2 : -10.2);
+  return { x: ch.x + ex * scale, y: ch.y - 18.5 * scale };
 }
-
-function closePhone() {
-  phoneOpen = false;
-  phonePopupEl.hidden = true;
-}
-
-phoneCloseEl.addEventListener("click", closePhone);
 
 document.getElementById("labBack").addEventListener("click", leaveLab);
-document.getElementById("renderBack").addEventListener("click", () => setScene("lab"));
 
 function updateLab(dt) {
-  if (phoneOpen) return;
-  stepCharacter(alyssa, dt, LAB_MOVE_SPEED, labObstacles, LAB_BOUNDS);
+  stepCharacter(anna, dt, LAB_MOVE_SPEED, labObstacles, LAB_BOUNDS);
   updateCompanion(dt);
-  if (alyssa.y > LAB.h - LAB.wall + 4) {
+  if (anna.y > LAB.h - LAB.wall + 4) {
     leaveLab();
     return;
   }
 
-  // A prompt floating above whatever Alyssa is close to: the stand with her
+  if (cuffFlight) {
+    cuffFlight.t += dt / CUFF_FLIGHT_SECONDS;
+    if (cuffFlight.t >= 1) {
+      cuffFlight = null;
+      anna.hearingAid = HEARING_AID_COLOR;
+      appPromptShowing = true;
+    }
+  }
+
+  // A prompt floating above whatever Anna is close to: the stand with her
   // gadget ("Pick up your new power gadget!"), or the fitter ("Try on your
-  // new superpower").
-  const spot = nearPickup()
-    ? { x: labPickup.x, y: labPickup.y - 34, title: "Pick up your new power gadget!" }
-    : nearFitter()
-      ? { x: labFitter.x, y: labFitter.y - 58, title: "Try on your new superpower" }
-      : null;
+  // new superpower"). Once the cuff is on, the pop-up for the app follows
+  // Anna until she opens it.
+  const spot = cuffFlight
+    ? null
+    : appPromptShowing
+      ? { x: anna.x, y: anna.y - 62, title: "press E to check out the mobile app!", noKey: true }
+      : nearPickup()
+        ? { x: labPickup.x, y: labPickup.y - 34, title: "Pick up your new power gadget!" }
+        : nearFitter()
+          ? { x: labFitter.x, y: labFitter.y - 58, title: "Try on your new superpower" }
+          : null;
   labPromptEl.hidden = !spot;
   if (spot) {
     const { scale: s, ox, oy } = labView;
     labPromptTitleEl.textContent = spot.title;
+    labPromptKeyEl.hidden = !!spot.noKey;
     labPromptEl.style.left = `${ox + spot.x * s}px`;
     labPromptEl.style.top = `${oy + spot.y * s}px`;
   }
 }
 
-// A behind-the-ear wearable, seen from above: a curved body with a glowing sensor.
+// A Sunny Ears cuff, on display: a thick, glossy C with two little buttons
+// near one end and a dark sensor on the inside, and a thin wire from the
+// other end to a white receiver tip. A glint slides slowly over the metal.
 function drawGadget(g, x, y, color, size = 1, t = 0) {
   g.save();
   g.translate(x, y);
   g.scale(size, size);
-  g.strokeStyle = color;
-  g.lineWidth = 5;
   g.lineCap = "round";
+  const from = Math.PI * 0.45, to = Math.PI * 1.8; // open toward the lower right
+  const end = { x: Math.cos(from) * 8, y: Math.sin(from) * 8 };
+
+  // Wire and receiver
   g.beginPath();
-  g.arc(0, 0, 9, Math.PI * 0.75, Math.PI * 2.1);
+  g.moveTo(end.x, end.y);
+  g.quadraticCurveTo(5, 11, 10, 7);
+  g.strokeStyle = INK;
+  g.lineWidth = 2;
   g.stroke();
-  g.fillStyle = color;
+  g.strokeStyle = "#9a958c";
+  g.lineWidth = 1;
+  g.stroke();
   g.beginPath();
-  g.ellipse(-6, 7, 4, 6, 0.5, 0, Math.PI * 2);
+  g.ellipse(12, 6, 3.2, 2.6, -0.5, 0, Math.PI * 2);
+  g.fillStyle = "#fbf7ee";
   g.fill();
-  ink(g, 1.2);
-  g.fillStyle = `rgba(255,170,90,${0.65 + Math.sin(t * 2.2) * 0.3})`;
+  ink(g, 1);
+
+  // The cuff
   g.beginPath();
-  g.arc(7, -5, 2.2, 0, Math.PI * 2);
+  g.arc(0, 0, 8, from, to);
+  g.strokeStyle = INK;
+  g.lineWidth = 7.4;
+  g.stroke();
+  g.strokeStyle = color;
+  g.lineWidth = 5.4;
+  g.stroke();
+  g.beginPath();
+  g.arc(0, 0, 9, Math.PI * 1.05, Math.PI * 1.55);
+  g.strokeStyle = `rgba(255,255,255,${0.5 + Math.sin(t * 1.5) * 0.2})`;
+  g.lineWidth = 1.4;
+  g.stroke();
+  g.beginPath();
+  g.arc(Math.cos(Math.PI * 1.3) * 5.6, Math.sin(Math.PI * 1.3) * 5.6, 1.2, 0, Math.PI * 2);
+  g.fillStyle = "#24302c";
   g.fill();
+  g.fillStyle = "rgba(255,240,210,0.95)";
+  [1.62, 1.72].forEach((a) => {
+    g.beginPath();
+    g.arc(Math.cos(Math.PI * a) * 8, Math.sin(Math.PI * a) * 8, 0.9, 0, Math.PI * 2);
+    g.fill();
+  });
   g.restore();
 }
 
@@ -2354,136 +2974,243 @@ function drawPottedPlant(g, p) {
 }
 
 function drawLabRoom(g, t) {
-  const { h, wall } = LAB;
-
-  // A calm, sunlit spa: pale oak floor, sage walls, a soft runner to the platform
+  // A moody, cozy lounge: warm terrazzo floor, deep evergreen walls, a rust
+  // rug under the round sofa in the middle, and pools of lamplight.
   drawRoomShell(g, LAB, {
-    floorA: "#f4e8d4", floorB: "#efe1ca", seam: "rgba(120,90,55,0.22)",
-    wall: "#cfdcbf", wallTrim: "#e3ecd6", doorway: "#f7efe0", mat: "#e9b27d",
-    rugs: [() => {
-      roundRect(g, LAB.doorX - 44, labPlatform.y + labPlatform.r - 10, 88, h - wall - labPlatform.y - labPlatform.r + 10, 10);
-      g.fillStyle = "#f6dcc0";
-      g.fill();
-      ink(g, 1.8);
-    }],
+    floorA: "#e9dcc8", floorB: "#e9dcc8", seam: "rgba(0,0,0,0)",
+    wall: "#3d574b", wallTrim: "#557263", doorway: "#f3e6cf", mat: "#c46a3f",
+    rugs: [
+      () => {
+        // Terrazzo flecks
+        let seed = 7;
+        const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+        const flecks = ["#c9a98a", "#b9c4ae", "#d8b48f", "#a99a8a"];
+        for (let k = 0; k < 340; k++) {
+          g.fillStyle = flecks[k % flecks.length];
+          g.beginPath();
+          g.ellipse(rand() * LAB.w, rand() * LAB.h, 1.5 + rand() * 2.5, 1 + rand() * 1.8, rand() * 3, 0, Math.PI * 2);
+          g.fill();
+        }
+      },
+      () => {
+        // A round rust rug under the lounge
+        g.beginPath();
+        g.arc(labPlatform.x, labPlatform.y, labPlatform.r + 34, 0, Math.PI * 2);
+        g.fillStyle = "#b8643f";
+        g.fill();
+        ink(g, 2.2);
+        g.strokeStyle = "#d98b5f";
+        g.lineWidth = 3;
+        g.beginPath();
+        g.arc(labPlatform.x, labPlatform.y, labPlatform.r + 22, 0, Math.PI * 2);
+        g.stroke();
+      },
+    ],
   });
 
-  // Backlit display shelf along the back wall
-  softGlow(g, labShelf.x + labShelf.w / 2, labShelf.y + 30, 240, "rgba(255,220,160,0.35)");
-  roundRect(g, labShelf.x, labShelf.y, labShelf.w, labShelf.h, 10);
-  g.fillStyle = "#c08a58";
+  // The back wall: walnut slats with arched niches, each lit from inside
+  const sh = labShelf;
+  roundRect(g, sh.x, sh.y, sh.w, sh.h, 6);
+  g.fillStyle = "#6b4630";
   g.fill();
   ink(g, 2.5);
-  roundRect(g, labShelf.x + 6, labShelf.y + 6, labShelf.w - 12, labShelf.h - 12, 6);
-  g.fillStyle = "#fdf7ea";
-  g.fill();
-  ink(g, 1.5);
+  g.fillStyle = "#58392a";
+  for (let sx = sh.x + 4; sx < sh.x + sh.w - 4; sx += 9) g.fillRect(sx, sh.y + 3, 4, sh.h - 6);
   for (let i = 0; i < 6; i++) {
-    drawGadget(g, labShelf.x + 40 + i * 64, labShelf.y + 22, GADGET_COLORS[i], 0.9, t + i);
+    const nx = sh.x + 40 + i * 64;
+    softGlow(g, nx, sh.y + 24, 40, "rgba(255,206,140,0.45)");
+    g.beginPath();
+    g.moveTo(nx - 18, sh.y + 38);
+    g.lineTo(nx - 18, sh.y + 22);
+    g.arc(nx, sh.y + 22, 18, Math.PI, 0);
+    g.lineTo(nx + 18, sh.y + 38);
+    g.closePath();
+    g.fillStyle = "#ffe4b8";
+    g.fill();
+    ink(g, 1.6);
+    drawGadget(g, nx, sh.y + 24, GADGET_COLORS[i], 0.85, t + i);
   }
 
-  // Pedestals with gadgets on display. The one Alyssa can pick up glows blue
-  // until she takes it, and is left empty after.
+  // Stone plinths along the walls, each in its own pool of light. The one
+  // Anna can pick up glows gold until she takes it, and is left empty after.
   labPedestals.forEach((p, i) => {
     const pickup = p === labPickup;
-    const taken = pickup && alyssa.hearingAid;
-    softGlow(g, p.x, p.y, 70, "rgba(255,214,150,0.35)");
+    const taken = pickup && (anna.hearingAid || cuffFlight);
+    softGlow(g, p.x, p.y, 80, "rgba(255,206,140,0.4)");
     if (pickup && !taken) {
-      softGlow(g, p.x, p.y, 92, `rgba(110,175,225,${0.3 + (0.5 + Math.sin(t * 2.4) * 0.5) * 0.35})`);
+      softGlow(g, p.x, p.y, 92, `rgba(240,196,100,${0.3 + (0.5 + Math.sin(t * 2.4) * 0.5) * 0.35})`);
     }
-    g.fillStyle = "rgba(60,40,20,0.18)";
-    roundRect(g, p.x - 26, p.y - 22, 56, 56, 12);
+    g.fillStyle = "rgba(40,30,20,0.2)";
+    g.beginPath();
+    g.ellipse(p.x + 3, p.y + 8, 28, 24, 0, 0, Math.PI * 2);
     g.fill();
-    roundRect(g, p.x - 28, p.y - 28, 56, 56, 12);
-    g.fillStyle = "#c08a58";
+    g.beginPath();
+    g.arc(p.x, p.y, 27, 0, Math.PI * 2);
+    g.fillStyle = "#d8cbb6";
     g.fill();
     ink(g, 2.5);
-    roundRect(g, p.x - 22, p.y - 22, 44, 44, 9);
-    g.fillStyle = "#fdf7ea";
+    g.beginPath();
+    g.arc(p.x, p.y, 20, 0, Math.PI * 2);
+    g.fillStyle = "#efe6d6";
     g.fill();
-    ink(g, 1.5);
+    ink(g, 1.2);
+    g.strokeStyle = "rgba(160,140,115,0.35)"; // travertine veins
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(p.x - 16, p.y + 6);
+    g.quadraticCurveTo(p.x, p.y + 2, p.x + 15, p.y + 9);
+    g.stroke();
     if (!taken) drawGadget(g, p.x, p.y, p.color, 1.3, t + i * 0.7);
   });
 
-  // Still-water basin with slow ripples
+  // A reflecting pool with candles floating on it
+  const bs = labBasin;
   g.beginPath();
-  g.arc(labBasin.x, labBasin.y, labBasin.r + 9, 0, Math.PI * 2);
-  g.fillStyle = "#e8dcc6";
+  g.arc(bs.x, bs.y, bs.r + 9, 0, Math.PI * 2);
+  g.fillStyle = "#cfc4b3";
   g.fill();
   ink(g, 2.5);
-  const water = g.createRadialGradient(labBasin.x, labBasin.y, 4, labBasin.x, labBasin.y, labBasin.r);
-  water.addColorStop(0, "#cfeaf0");
-  water.addColorStop(1, "#9fd0dc");
+  const water = g.createRadialGradient(bs.x, bs.y, 4, bs.x, bs.y, bs.r);
+  water.addColorStop(0, "#5f8b88");
+  water.addColorStop(1, "#3d6463");
   g.fillStyle = water;
   g.beginPath();
-  g.arc(labBasin.x, labBasin.y, labBasin.r, 0, Math.PI * 2);
+  g.arc(bs.x, bs.y, bs.r, 0, Math.PI * 2);
   g.fill();
   ink(g, 1.8);
   for (let i = 0; i < 3; i++) {
-    const phase = (t * 0.35 + i / 3) % 1;
-    g.strokeStyle = `rgba(255,255,255,${0.6 * (1 - phase)})`;
-    g.lineWidth = 1.5;
+    const phase = (t * 0.3 + i / 3) % 1;
+    g.strokeStyle = `rgba(255,236,200,${0.4 * (1 - phase)})`;
+    g.lineWidth = 1.2;
     g.beginPath();
-    g.arc(labBasin.x, labBasin.y, 6 + phase * (labBasin.r - 8), 0, Math.PI * 2);
+    g.arc(bs.x, bs.y, 6 + phase * (bs.r - 8), 0, Math.PI * 2);
     g.stroke();
   }
-
-  // Loungers for waiting and relaxing
-  labLoungers.forEach((l) => {
-    g.fillStyle = "rgba(60,40,20,0.18)";
-    roundRect(g, l.x + 3, l.y + 5, l.w, l.h, 12);
+  [[-18, -10], [16, -16], [6, 18]].forEach(([cx, cy], i) => {
+    const bob = Math.sin(t * 0.8 + i * 2) * 1.5;
+    const px = bs.x + cx + bob, py = bs.y + cy;
+    softGlow(g, px, py, 22, "rgba(255,200,120,0.5)");
+    g.beginPath();
+    g.arc(px, py, 5, 0, Math.PI * 2);
+    g.fillStyle = "#f6efe2";
     g.fill();
-    roundRect(g, l.x, l.y, l.w, l.h, 12);
-    g.fillStyle = "#fdf1dd";
+    ink(g, 1);
+    g.fillStyle = "#ffcf70";
+    g.beginPath();
+    g.ellipse(px, py, 1.6, 2.4, 0, 0, Math.PI * 2);
+    g.fill();
+  });
+
+  // Deep lounge chairs in rust boucle, with a throw over one, and a pot of tea
+  labLoungers.forEach((l, i) => {
+    g.fillStyle = "rgba(40,30,20,0.2)";
+    roundRect(g, l.x + 3, l.y + 5, l.w, l.h, 18);
+    g.fill();
+    roundRect(g, l.x, l.y, l.w, l.h, 18);
+    g.fillStyle = "#c46a3f";
     g.fill();
     ink(g, 2.2);
-    roundRect(g, l.x + 6, l.y + 6, l.w - 12, 22, 8);
-    g.fillStyle = "#e9a36b";
+    roundRect(g, l.x + 6, l.y + 22, l.w - 12, l.h - 28, 12);
+    g.fillStyle = "#d98b5f";
     g.fill();
-    ink(g, 1.5);
+    ink(g, 1.4);
+    if (i === 0) {
+      roundRect(g, l.x + 4, l.y + l.h - 34, l.w - 8, 24, 6);
+      g.fillStyle = "#efe2c8";
+      g.fill();
+      ink(g, 1.4);
+      g.strokeStyle = "rgba(62,50,38,0.3)";
+      g.lineWidth = 1;
+      g.beginPath();
+      [l.y + l.h - 26, l.y + l.h - 18].forEach((yy) => {
+        g.moveTo(l.x + 8, yy);
+        g.lineTo(l.x + l.w - 8, yy);
+      });
+      g.stroke();
+    }
   });
+  const tea = labTeaTable;
+  g.beginPath();
+  g.arc(tea.x, tea.y, 15, 0, Math.PI * 2);
+  g.fillStyle = "#6b4630";
+  g.fill();
+  ink(g, 1.8);
+  g.beginPath();
+  g.arc(tea.x - 3, tea.y, 6, 0, Math.PI * 2);
+  g.fillStyle = "#efe6d6";
+  g.fill();
+  ink(g, 1);
+  g.beginPath();
+  g.arc(tea.x + 7, tea.y + 5, 3, 0, Math.PI * 2);
+  g.fill();
+  ink(g, 1);
 
   labPlants.forEach((p) => drawPottedPlant(g, p));
 
-  // Mirror behind the fitting platform, in a wooden frame
-  roundRect(g, labMirror.x - 5, labMirror.y - 5, labMirror.w + 10, labMirror.h + 10, 8);
-  g.fillStyle = "#c08a58";
-  g.fill();
-  ink(g, 2);
-  const glass = g.createLinearGradient(labMirror.x, 0, labMirror.x + labMirror.w, 0);
-  glass.addColorStop(0, "#eaf5fc");
-  glass.addColorStop(0.5, "#ffffff");
-  glass.addColorStop(1, "#cfe6f5");
-  g.fillStyle = glass;
-  roundRect(g, labMirror.x, labMirror.y, labMirror.w, labMirror.h, 5);
-  g.fill();
-  ink(g, 1.2);
-
-  // Fitting platform, gently pulsing
-  const pulse = 0.5 + Math.sin(t * 1.6) * 0.5;
-  softGlow(g, labPlatform.x, labPlatform.y, labPlatform.r + 60, `rgba(246,190,120,${0.18 + pulse * 0.12})`);
-  const disc = g.createRadialGradient(labPlatform.x, labPlatform.y, 10, labPlatform.x, labPlatform.y, labPlatform.r);
-  disc.addColorStop(0, "#fffaf0");
-  disc.addColorStop(1, "#f1e4cc");
-  g.fillStyle = disc;
+  // The round lounge sofa in the middle, open toward the door
+  const pl = labPlatform;
+  const inner = LAB_SOFA.inner, outer = LAB_SOFA.outer;
+  const a0 = LAB_SOFA.from, a1 = LAB_SOFA.to;
+  g.fillStyle = "rgba(40,30,20,0.22)";
   g.beginPath();
-  g.arc(labPlatform.x, labPlatform.y, labPlatform.r, 0, Math.PI * 2);
+  g.arc(pl.x + 3, pl.y + 7, outer, a0, a1);
+  g.arc(pl.x + 3, pl.y + 7, inner, a1, a0, true);
+  g.closePath();
   g.fill();
-  ink(g, 3);
-  g.strokeStyle = `rgba(201,121,58,${0.35 + pulse * 0.3})`;
-  g.lineWidth = 1.5;
   g.beginPath();
-  g.arc(labPlatform.x, labPlatform.y, labPlatform.r - 16, 0, Math.PI * 2);
+  g.arc(pl.x, pl.y, outer, a0, a1);
+  g.arc(pl.x, pl.y, inner, a1, a0, true);
+  g.closePath();
+  g.fillStyle = "#f1e7d6";
+  g.fill();
+  ink(g, 2.5);
+  g.beginPath();
+  g.arc(pl.x, pl.y, outer - 6, a0 + 0.03, a1 - 0.03);
+  g.strokeStyle = "#ddd0bb";
+  g.lineWidth = 9;
+  g.lineCap = "round";
   g.stroke();
+  // Seams between the cushions, and a few scatter cushions
+  g.strokeStyle = "rgba(62,50,38,0.3)";
+  g.lineWidth = 1.2;
+  for (let a = a0 + 0.55; a < a1 - 0.2; a += 0.55) {
+    g.beginPath();
+    g.moveTo(pl.x + Math.cos(a) * inner, pl.y + Math.sin(a) * inner);
+    g.lineTo(pl.x + Math.cos(a) * (outer - 10), pl.y + Math.sin(a) * (outer - 10));
+    g.stroke();
+  }
+  [[a0 + 0.35, "#d9a441"], [Math.PI * 1.5, "#5f8b88"], [a1 - 0.35, "#c46a3f"]].forEach(([a, color]) => {
+    const cx = pl.x + Math.cos(a) * (inner + 10), cy = pl.y + Math.sin(a) * (inner + 10);
+    roundRect(g, cx - 8, cy - 8, 16, 16, 5);
+    g.fillStyle = color;
+    g.fill();
+    ink(g, 1.3);
+  });
 
-  // The wearable, waiting on a small tray next to the fitter
-  g.fillStyle = "#fdf7ea";
+  // Brass pendant lights hanging over the lounge
+  const pulse = 0.5 + Math.sin(t * 1.2) * 0.5;
+  [[pl.x - 70, pl.y - 40], [pl.x + 70, pl.y - 40], [pl.x, pl.y + 50]].forEach(([lx, ly]) => {
+    softGlow(g, lx, ly, 90, `rgba(255,200,130,${0.18 + pulse * 0.08})`);
+  });
+
+  // The wearable, waiting on a little stone side table next to the fitter
   g.beginPath();
   g.arc(labTray.x, labTray.y, labTray.r, 0, Math.PI * 2);
+  g.fillStyle = "#d8cbb6";
   g.fill();
   ink(g, 2);
   softGlow(g, labTray.x, labTray.y, 34, `rgba(246,178,110,${0.25 + pulse * 0.25})`);
-  drawGadget(g, labTray.x, labTray.y, "#e07a2f", 1, t);
+  drawGadget(g, labTray.x, labTray.y, HEARING_AID_COLOR, 1, t);
+}
+
+// Warm, dim corners: a soft vignette over the room, drawn on top of
+// everything so the light pools stand out.
+function drawLabVignette(g) {
+  const v = g.createRadialGradient(LAB.w / 2, LAB.h / 2, LAB.h * 0.35, LAB.w / 2, LAB.h / 2, LAB.w * 0.62);
+  v.addColorStop(0, "rgba(30,24,18,0)");
+  v.addColorStop(1, "rgba(30,24,18,0.3)");
+  g.fillStyle = v;
+  g.fillRect(0, 0, LAB.w, LAB.h);
 }
 
 function renderLab(now) {
@@ -2498,73 +3225,110 @@ function renderLab(now) {
   g.save();
   g.shadowColor = "rgba(62,50,38,0.22)";
   g.shadowBlur = 40;
-  g.fillStyle = "#cfdcbf";
+  g.fillStyle = "#3d574b";
   g.fillRect(0, 0, LAB.w, LAB.h);
   g.restore();
 
   drawLabRoom(g, t);
 
-  // Fitter, Alyssa (and Jamie, if she's along), back-to-front
+  // The shoppers mostly gaze at the cuff, now and then turning to each other
+  // to talk it over; the first leans in for a closer look.
+  const [first, second] = labShoppers;
+  const beat = t % 8;
+  first.facing = beat > 5.2 && beat < 6.6 ? "down" : "left";
+  second.facing = beat > 2.4 && beat < 4 ? "up" : beat > 5.2 && beat < 6.6 ? "up" : "left";
+  const lean = first.facing === "left" ? Math.max(0, Math.sin(t * 0.9)) * 4 : 0;
+
+  // Fitter, the shoppers, Anna (and Jamie, if she's along), back-to-front
   [
     { y: labFitter.y, draw: () => drawCharacter(g, labFitter, labFitter.x, labFitter.y, 1.4, animPhase, false) },
-    { y: alyssa.y, draw: () => drawCharacter(g, alyssa, alyssa.x, alyssa.y, 1.4, animPhase, !!alyssa.moving) },
+    { y: first.y, draw: () => drawCharacter(g, first, first.x - lean, first.y, 1.4, animPhase + 1.1, false) },
+    { y: second.y, draw: () => drawCharacter(g, second, second.x, second.y, 1.4, animPhase + 2.3, false) },
+    { y: anna.y, draw: () => drawCharacter(g, anna, anna.x, anna.y, 1.4, animPhase, !!anna.moving) },
     ...(jamieJoined
       ? [{ y: jamie.y, draw: () => drawCharacter(g, jamie, jamie.x, jamie.y, 1.4, animPhase + 0.7, !!jamie.moving) }]
       : []),
   ]
     .sort((a, b) => a.y - b.y)
     .forEach((d) => d.draw());
+  drawCuffFlight(g, t);
+  drawShopperThought(g, t);
+  drawLabVignette(g);
+}
+
+// Every so often, a little thought bubble over the first shopper, with the
+// cuff in it: picturing herself wearing it.
+function drawShopperThought(g, t) {
+  const phase = (t + 3) % 8;
+  if (phase > 3.2) return;
+  const alpha = Math.min(1, phase * 3, (3.2 - phase) * 3);
+  const p = labShoppers[0];
+  const bx = p.x + 6, by = p.y - 76;
+  g.save();
+  g.globalAlpha = alpha;
+  [[p.x - 2, p.y - 50, 2.5], [p.x + 2, p.y - 57, 3.5]].forEach(([cx, cy, r]) => {
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.fillStyle = "#fdf7ea";
+    g.fill();
+    ink(g, 1.2);
+  });
+  g.beginPath();
+  g.ellipse(bx, by, 20, 15, 0, 0, Math.PI * 2);
+  g.fillStyle = "#fdf7ea";
+  g.fill();
+  ink(g, 1.6);
+  drawGadget(g, bx - 1, by - 1, labShopperStand.color, 0.75, t);
+  g.restore();
+}
+
+// The cuff on its way from the stand to Anna's ear: it rises, arcs over,
+// and shrinks down to fit her ear, trailing a little golden shimmer.
+function drawCuffFlight(g, t) {
+  if (!cuffFlight) return;
+  const k = cuffFlight.t;
+  const ease = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+  const from = labPickup, to = cuffEarPoint(anna, 1.4);
+  const x = from.x + (to.x - from.x) * ease;
+  const y = from.y + (to.y - from.y) * ease - Math.sin(k * Math.PI) * 70;
+  const size = 1.3 + (0.25 - 1.3) * ease;
+  for (let i = 1; i <= 5; i++) {
+    const kk = Math.max(0, k - i * 0.04);
+    const ee = kk < 0.5 ? 2 * kk * kk : 1 - Math.pow(-2 * kk + 2, 2) / 2;
+    g.fillStyle = `rgba(255,214,130,${0.5 * (1 - i / 6)})`;
+    g.beginPath();
+    g.arc(from.x + (to.x - from.x) * ee, from.y + (to.y - from.y) * ee - Math.sin(kk * Math.PI) * 70, 3 - i * 0.4, 0, Math.PI * 2);
+    g.fill();
+  }
+  softGlow(g, x, y, 40 * size + 10, "rgba(255,214,130,0.55)");
+  drawGadget(g, x, y, HEARING_AID_COLOR, size, t);
 }
 
 /* ---------------------------------------------------------------------- */
 /* Jamie's house: "Subtitles for the World"                               */
 /*                                                                        */
-/* Alyssa visits her friend Jamie, who is hard of hearing, and finds the  */
-/* sounds of the house already "subtitled" by small objects, inspired by  */
-/* Google's Little Signals. Jamie walks her through them one at a time;   */
-/* E (or a click on the speech bubble) moves the story along.             */
+/* Anna visits her friend Jamie, who is hard of hearing. Instead of a   */
+/* gadget for every sound, Jamie has one captioning device in the middle  */
+/* of the house, hooked up to her TV and her monitor. Jamie walks her     */
+/* through what it does; E (or a click on the speech bubble) moves the    */
+/* story along.                                                           */
 /* ---------------------------------------------------------------------- */
 
 const SUBS = { w: 900, h: 640, wall: 26, doorX: 450, doorW: 76 };
 const SUBS_BOUNDS = { width: SUBS.w, height: SUBS.h };
 const SUBS_MOVE_SPEED = 150;
-const DEVICE_REACH = 110;
 const JAMIE_SPEED = 130;
 
 // Furniture, in the room's own coordinates.
-const subsScreen = { x: 240, y: 30, w: 420, h: 128 };
+const subsScreen = { x: 240, y: 30, w: 420, h: 128 }; // the TV on the back wall
 const subsSofa = { x: 330, y: 280, w: 240, h: 56 };
-const subsCounter = { x: 40, y: 40, w: 170, h: 58 };
-const subsBed = { x: 712, y: 40, w: 148, h: 190 };
-const subsLampTable = { x: 640, y: 300, r: 22 };
-const subsScentTable = { x: 300, y: 545, r: 22 };
-const subsBench = { x: 580, y: 538, w: 112, h: 44 };
+const subsCounter = { x: 40, y: 40, w: 170, h: 58 }; // the kitchen, with the oven
+const subsDesk = { x: 690, y: 74, w: 180, h: 58 };
+const subsMonitor = { x: 716, y: 34, w: 128, h: 74 };
+const subsDeskChair = { x: 780, y: 160, r: 16 };
+const subsHubTable = { x: 450, y: 412, r: 34 }; // the coffee table the captioner sits on
+const subsAlarm = { x: 236, y: 13 }; // the smoke alarm, high on the back wall
 const subsPlants = [{ x: 60, y: 590 }, { x: 840, y: 590 }];
-
-// Jamie's "subtitles" around the house. `x`/`y` is where Alyssa stands to
-// read about each one once the story is over.
-const subsDevices = [
-  {
-    id: "scent", name: "Jasmine doorbell", x: 300, y: 545,
-    description: "Sprays a strong scent of jasmine whenever the doorbell rings.",
-  },
-  {
-    id: "screen", name: "The big screen", x: 450, y: 215,
-    description: "Writes out the sounds around the house: the kettle, the dryer, the dog.",
-  },
-  {
-    id: "lamp", name: "Name lamp", x: 640, y: 300,
-    description: "Glows in someone's colour when they call Jamie's name from another room.",
-  },
-  {
-    id: "pillow", name: "Pillow shaker", x: 770, y: 255,
-    description: "Shakes the bed if the smoke alarm goes off at night, and wakes Jamie in the morning.",
-  },
-  {
-    id: "clip", name: "Siren clip", x: 636, y: 560,
-    description: "Clips to her bag and blinks orange when it hears an ambulance, a fire truck or a bike behind her.",
-  },
-];
 
 const subsObstacles = [
   { x: 0, y: 0, w: SUBS.w, h: SUBS.wall },
@@ -2575,63 +3339,71 @@ const subsObstacles = [
     x: SUBS.doorX + SUBS.doorW / 2, y: SUBS.h - SUBS.wall,
     w: SUBS.w - (SUBS.doorX + SUBS.doorW / 2), h: SUBS.wall,
   },
-  subsScreen, subsSofa, subsCounter, subsBed, subsBench,
-  circleBox(subsLampTable), circleBox(subsScentTable),
+  subsScreen, subsSofa, subsCounter, subsDesk,
+  circleBox(subsDeskChair), circleBox(subsHubTable),
   ...subsPlants.map((p) => circleBox(p, 15)),
 ];
 
 const jamie = {
   name: "Jamie",
-  x: 450, y: 420, facing: "down", path: [],
-  hearingAid: "#e8833a", hearingAidPair: true, // a pair, like Alyssa's but orange
+  x: 560, y: 500, facing: "down", path: [],
+  hearingAid: "#e8833a", hearingAidPair: true, // a pair, like Anna's but orange
   palette: { skin: "#a86f4c", hair: "#2a1c14", hairStyle: "medium", ears: true, outfit: "#7aa874", outfitTrim: "#f4ecd8" },
 };
-const JAMIE_START = { x: 450, y: 420 };
+const JAMIE_START = { x: 560, y: 500 };
+
+// Where Jamie's link goes: the prototype of the captioner.
+const SUBTITLES_PROTOTYPE_URL = "https://sunny.dabble.team/prototype2/";
+
+// The roommate's colour: the captioner glows this when she calls for Jamie.
+const ROOMMATE_COLOR = "#5fc7b8";
 
 // The story, one speech bubble per step. Jamie walks `walk` (waypoints that
-// keep her clear of the furniture) before she speaks, and `device` comes to
-// life for the step.
+// keep her clear of the furniture) before she speaks, and the captioner does
+// `device` for the step: "oven" (pushes a reminder to the screens), "name"
+// (glows the roommate's colour) or "emergency" (flashes, rumbles, and takes
+// over every screen).
 const subsStory = [
   {
     who: "jamie",
-    text: "alyssa! you made it. come on in, make yourself at home.",
+    text: "anna! you made it. come on in!",
   },
   {
-    who: "alyssa", device: "scent", delay: 1.4, // a moment to see the spray before she notices
-    text: "oh hey i smell jasmine!",
+    who: "anna", device: "oven", delay: 1.6, // a moment to see the subtitle before she notices
+    text: "wait, did your tv just tell you the oven's done?",
   },
   {
-    who: "jamie", device: "scent", walk: [[350, 490]],
-    text: "oh yeah! that object sprays a strong scent of jasmine whenever the doorbell rings because i can't hear it. my package must've arrived.",
+    who: "jamie", device: "oven", walk: [[528, 440]],
+    text: "yep! that's my captioner. it's one device that connects to all my screens. it listens for everything i can't hear and puts it on my screens as subtitles.",
   },
   {
-    // The bubble hangs below Jamie here and for the bed, so it doesn't cover what she's showing.
-    who: "jamie", device: "screen", walk: [[250, 470], [250, 215], [450, 215]], below: true,
-    text: "and this big screen is like subtitles for my whole house. it listens for the sounds i'd miss and writes them out: the kettle boiling, the dryer finishing, the dog barking at the mail carrier.",
+    who: "jamie", device: "name",
+    text: "it glows in teal when someone calls my name...",
   },
   {
-    who: "jamie", device: "lamp", walk: [[620, 215]],
-    text: "this little lamp glows whenever someone calls my name from another room. my roommate used to shout for me forever. now she just says “jamie!” and it lights up in her color, so i know who's looking for me.",
-  },
-  {
-    who: "jamie", device: "pillow", walk: [[770, 255]], below: true,
-    text: "and this one lets me sleep easy. a beeping smoke alarm would never wake me up, so if it goes off at night, this pad under my pillow shakes the whole bed. it doubles as my morning alarm too.",
-  },
-  {
-    who: "jamie", device: "clip", walk: [[770, 450], [660, 498]],
-    text: "oh and i bring this guy around attached to my bag when i'm on a walk or in my car. i can never hear those goshdarn ambulances or firetrucks! or a bike behind me. it lights up a blinking orange whenever it hears those things so i know to move to the side, whether i'm walking or driving.",
+    who: "jamie", device: "emergency",
+    text: "...and flashes red and rumbles if there's an emergency alarm.",
   },
   {
     who: "jamie",
-    text: "what are you doing tonight?",
+    text: "these are my subtitles for the world! now it's just one device i can keep in my home and bring with me -- these days I feel like my hearing has gotten a lot better, but I think I just understand what's happening around me.",
   },
   {
-    who: "alyssa",
-    text: "hmm, nothing much, i don't really go out Friday evenings anymore. the world is overwhelming.",
+    // E opens the link (in a new tab) as well as moving the story on.
+    who: "jamie", link: SUBTITLES_PROTOTYPE_URL,
+    text: "most of us here in Carmel have this -- you should grab one! check out this link!",
   },
   {
     who: "jamie",
-    text: "i forget you're new here! evenings in Carmel are awesome. let me take you to cafe lumen!",
+    text: "so what're you doing tonight?",
+  },
+  {
+    who: "anna",
+    text: "hmm i don't typically go out on a friday night, i'm usually quite overwhelmed..",
+  },
+  {
+    who: "jamie",
+    text: "oh i've got to take you to a local favourite -- nights out are a beautiful ritual for us here in Carmel. let's go.",
   },
 ];
 
@@ -2642,11 +3414,9 @@ let deviceTime = 0; // seconds since it started
 
 const subsCanvas = document.getElementById("subsCanvas");
 const subsCtx = subsCanvas.getContext("2d");
-const subsCardEl = document.getElementById("subsCard");
 const storyBubbleEl = document.getElementById("storyBubble");
 const subsView = { scale: 1, ox: 0, oy: 0 };
 const subsBuilding = buildings.find((b) => b.enter === "subtitles");
-let subsActiveDevice = null;
 let shownStoryStep = null;
 
 function resizeSubsCanvas() {
@@ -2679,6 +3449,8 @@ function storyStepReady() {
 
 function advanceStory() {
   if (!storyStepReady()) return;
+  const { link } = subsStory[storyStep];
+  if (link) openInNewTab(link, "Open the link");
   if (storyStep + 1 < subsStory.length) {
     startStoryStep(storyStep + 1);
   } else {
@@ -2688,43 +3460,42 @@ function advanceStory() {
   }
 }
 
-/* Once the story's over, Jamie grabs her bag (siren clip and all) and     */
-/* comes along to Cafe Lumen: from then on she follows a few steps behind  */
-/* Alyssa wherever she goes, so steering Alyssa walks them both.           */
+/* Once the story's over, Jamie comes along to Cafe Lumen: from then on  */
+/* she follows a few steps behind Anna wherever she goes, so steering   */
+/* Anna walks them both.                                                */
 
 let jamieJoined = false;
-const companionTrail = []; // where Alyssa has walked, oldest first
+const companionTrail = []; // where Anna has walked, oldest first
 const FOLLOW_GAP = 44; // how far behind her Jamie walks, along her path
 
 function jamieJoins() {
   jamieJoined = true;
-  jamie.carrying = "bag";
   jamie.path = [];
   companionTrail.length = 0;
-  companionTrail.push({ x: jamie.x, y: jamie.y }, { x: alyssa.x, y: alyssa.y });
+  companionTrail.push({ x: jamie.x, y: jamie.y }, { x: anna.x, y: anna.y });
 }
 
-// Puts Jamie at (dx, dy) from Alyssa: on arriving somewhere new, or after
-// Alyssa has been dragged or clicked into place.
+// Puts Jamie at (dx, dy) from Anna: on arriving somewhere new, or after
+// Anna has been dragged or clicked into place.
 function seedCompanion(dx, dy) {
   if (!jamieJoined) return;
-  jamie.x = alyssa.x + dx;
-  jamie.y = alyssa.y + dy;
-  jamie.facing = alyssa.facing;
+  jamie.x = anna.x + dx;
+  jamie.y = anna.y + dy;
+  jamie.facing = anna.facing;
   jamie.moving = false;
   companionTrail.length = 0;
-  companionTrail.push({ x: jamie.x, y: jamie.y }, { x: alyssa.x, y: alyssa.y });
+  companionTrail.push({ x: jamie.x, y: jamie.y }, { x: anna.x, y: anna.y });
 }
 
-// Jamie walks to the spot FOLLOW_GAP back along Alyssa's path, so she
-// follows the way Alyssa went instead of cutting corners through walls.
+// Jamie walks to the spot FOLLOW_GAP back along Anna's path, so she
+// follows the way Anna went instead of cutting corners through walls.
 function updateCompanion(dt) {
   if (!jamieJoined) return;
   const trail = companionTrail;
   const last = trail[trail.length - 1];
-  if (!last || Math.hypot(alyssa.x - last.x, alyssa.y - last.y) > 2) trail.push({ x: alyssa.x, y: alyssa.y });
+  if (!last || Math.hypot(anna.x - last.x, anna.y - last.y) > 2) trail.push({ x: anna.x, y: anna.y });
 
-  let remaining = FOLLOW_GAP, px = alyssa.x, py = alyssa.y, target = null;
+  let remaining = FOLLOW_GAP, px = anna.x, py = anna.y, target = null;
   for (let i = trail.length - 1; i >= 0; i--) {
     const q = trail[i];
     const d = Math.hypot(px - q.x, py - q.y);
@@ -2755,10 +3526,10 @@ function updateCompanion(dt) {
 storyBubbleEl.addEventListener("click", advanceStory);
 
 function enterSubs() {
-  alyssa.x = SUBS.doorX;
-  alyssa.y = SUBS.h - SUBS.wall - 26;
-  alyssa.facing = "up";
-  alyssa.moving = false;
+  anna.x = SUBS.doorX;
+  anna.y = SUBS.h - SUBS.wall - 26;
+  anna.facing = "up";
+  anna.moving = false;
   storyDevice = null;
   if (jamieJoined) {
     storyStep = -1;
@@ -2772,23 +3543,23 @@ function enterSubs() {
 
 function leaveSubs() {
   const door = doorOf(subsBuilding);
-  alyssa.x = door.x;
-  alyssa.y = door.y + CHAR_RADIUS + 18;
-  alyssa.facing = "down";
-  alyssa.moving = false;
+  anna.x = door.x;
+  anna.y = door.y + CHAR_RADIUS + 18;
+  anna.facing = "down";
+  anna.moving = false;
   seedCompanion(32, 2);
   storyStep = -1;
   storyDevice = null;
   shownStoryStep = null;
   storyBubbleEl.hidden = true;
-  subsCardEl.hidden = true;
-  subsActiveDevice = null;
+  // Stepping out with Jamie, the day has turned to evening.
+  if (jamieJoined) eveningTarget = 1;
   setScene("world");
 }
 
 document.getElementById("subsBack").addEventListener("click", leaveSubs);
 
-// Jamie follows her waypoints, then turns to face Alyssa.
+// Jamie follows her waypoints, then turns to face Anna.
 function updateJamie(dt) {
   const target = jamie.path[0];
   if (target) {
@@ -2808,15 +3579,15 @@ function updateJamie(dt) {
     return;
   }
   jamie.moving = false;
-  const dx = alyssa.x - jamie.x, dy = alyssa.y - jamie.y;
+  const dx = anna.x - jamie.x, dy = anna.y - jamie.y;
   jamie.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
 }
 
 function updateSubs(dt) {
-  // Jamie's in the way while she's showing Alyssa around, but not once she's following her.
+  // Jamie's in the way while she's showing Anna around, but not once she's following her.
   const jamieBox = { x: jamie.x - 12, y: jamie.y - 8, w: 24, h: 22 };
-  stepCharacter(alyssa, dt, SUBS_MOVE_SPEED, jamieJoined ? subsObstacles : [...subsObstacles, jamieBox], SUBS_BOUNDS);
-  if (alyssa.y > SUBS.h - SUBS.wall + 4) {
+  stepCharacter(anna, dt, SUBS_MOVE_SPEED, jamieJoined ? subsObstacles : [...subsObstacles, jamieBox], SUBS_BOUNDS);
+  if (anna.y > SUBS.h - SUBS.wall + 4) {
     leaveSubs();
     return;
   }
@@ -2826,29 +3597,6 @@ function updateSubs(dt) {
   deviceTime += dt;
   updateStoryBubble();
 
-  // Once the story's over, describe whichever object Alyssa is standing near.
-  let near = null, nearDist = DEVICE_REACH;
-  if (storyStep < 0) {
-    subsDevices.forEach((d) => {
-      if (d.id === "clip" && jamieJoined) return; // the bag's gone with Jamie
-      const dist = Math.hypot(alyssa.x - d.x, alyssa.y - d.y);
-      if (dist < nearDist) {
-        near = d;
-        nearDist = dist;
-      }
-    });
-  }
-  if (near !== subsActiveDevice) {
-    subsActiveDevice = near;
-    subsCardEl.hidden = !near;
-    if (near) {
-      subsCardEl.innerHTML = `
-        <p class="subs-card-option">Subtitles for the World</p>
-        <p class="subs-card-name">${near.name}</p>
-        <p class="subs-card-desc">${near.description}</p>
-      `;
-    }
-  }
 }
 
 // The speech bubble over whoever's talking, with a prompt to carry on.
@@ -2861,9 +3609,9 @@ function updateStoryBubble() {
       const { who, text } = subsStory[step];
       const last = step === subsStory.length - 1;
       storyBubbleEl.innerHTML = `
-        <p class="quote-name">${who === "jamie" ? "Jamie" : "Alyssa"}</p>
+        <p class="quote-name">${who === "jamie" ? "Jamie" : "Anna"}</p>
         <p class="quote-text">${text}</p>
-        <p class="story-next">Press <kbd>E</kbd> ${last ? "to finish" : "to continue"}</p>
+        <p class="story-next">Press <kbd>E</kbd> ${subsStory[step].link ? "to open the link" : last ? "to finish" : "to continue"}</p>
         <svg class="quote-tail" viewBox="0 0 30 24" aria-hidden="true">
           <path d="M3 0 Q 10 12 5 22 Q 17 14 27 0" />
         </svg>
@@ -2873,7 +3621,7 @@ function updateStoryBubble() {
   if (step === null) return;
 
   const { who, below } = subsStory[step];
-  const speaker = who === "jamie" ? jamie : alyssa;
+  const speaker = who === "jamie" ? jamie : anna;
   const { scale: s, ox, oy } = subsView;
   const sx = ox + speaker.x * s;
   const half = storyBubbleEl.offsetWidth / 2;
@@ -2916,346 +3664,428 @@ function drawSideTable(g, table) {
   g.fill();
   g.beginPath();
   g.arc(table.x, table.y, table.r, 0, Math.PI * 2);
-  g.fillStyle = "#c08a58";
+  g.fillStyle = "#cfae80";
   g.fill();
   ink(g, 2.2);
   g.beginPath();
   g.arc(table.x, table.y, table.r - 5, 0, Math.PI * 2);
-  g.fillStyle = "#e9cfa8";
+  g.fillStyle = "#e6cfa9";
   g.fill();
 }
 
-// A little jasmine flower: five white petals around a yellow centre.
-function drawJasmine(g, x, y, size, alpha) {
+// What a connected screen shows: its usual picture, a reminder from the
+// captioner as a subtitle, or, in an emergency, a red alert over everything.
+// `x`/`y`/`w`/`h` is the glass; `size` scales the text for smaller screens.
+function drawScreenFeed(g, x, y, w, h, size, t, idle) {
+  const glass = g.createLinearGradient(0, y, 0, y + h);
+  glass.addColorStop(0, "#35536f");
+  glass.addColorStop(1, "#1d2e40");
+  g.fillStyle = glass;
+  roundRect(g, x, y, w, h, 6);
+  g.fill();
   g.save();
-  g.globalAlpha = alpha;
-  g.translate(x, y);
-  g.scale(size, size);
-  g.fillStyle = "#ffffff";
-  g.strokeStyle = "rgba(62,50,38,0.45)";
-  g.lineWidth = 0.8;
-  for (let p = 0; p < 5; p++) {
-    const a = (p / 5) * Math.PI * 2;
-    g.beginPath();
-    g.ellipse(Math.cos(a) * 3.4, Math.sin(a) * 3.4, 2.8, 1.8, a, 0, Math.PI * 2);
-    g.fill();
-    g.stroke();
+  roundRect(g, x, y, w, h, 6);
+  g.clip();
+  idle(x, y, w, h);
+
+  if (storyDevice === "emergency") {
+    const flash = Math.sin(t * 8) > 0;
+    g.fillStyle = flash ? "rgba(214,58,46,0.94)" : "rgba(150,30,26,0.94)";
+    g.fillRect(x, y, w, h);
+    g.fillStyle = "#ffffff";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.font = `800 ${Math.round(22 * size)}px Inter, sans-serif`;
+    g.letterSpacing = `${Math.round(2 * size)}px`;
+    g.fillText("SMOKE ALARM", x + w / 2, y + h * 0.4);
+    g.letterSpacing = "0px";
+    g.font = `600 ${Math.round(13 * size)}px Inter, sans-serif`;
+    g.fillText("kitchen · test mode", x + w / 2, y + h * 0.7);
   }
-  g.fillStyle = "#f2cf5b";
-  g.beginPath();
-  g.arc(0, 0, 1.6, 0, Math.PI * 2);
-  g.fill();
   g.restore();
+  roundRect(g, x, y, w, h, 6);
+  ink(g, 1.8);
+
+  if (storyDevice === "oven") {
+    const fade = Math.min(1, deviceTime / 0.4);
+    g.save();
+    g.globalAlpha = fade;
+    g.fillStyle = "#f2b36b";
+    g.font = `700 ${Math.round(11 * size)}px Inter, sans-serif`;
+    g.letterSpacing = "2px";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText("[ KITCHEN ]", x + w / 2, y + h * 0.5);
+    g.letterSpacing = "0px";
+    g.restore();
+    drawCaption(g, "the oven is done", x + w / 2, y + h * 0.78, Math.round(20 * size), fade);
+  }
 }
 
-const SCREEN_CAPTIONS = [
-  ["KITCHEN", "the kettle is boiling"],
-  ["LAUNDRY", "the dryer is done"],
-  ["FRONT YARD", "the dog is barking"],
-];
+// The captioner: a speaker-like tube lying on its side on the coffee table,
+// with rings of light round its ends and a wide screen along its front. It breathes
+// a warm white while it listens, glows the caller's colour when it hears
+// Jamie's name, and flashes red and rumbles in an emergency, and its screen
+// says what it heard. When it sends something to the TV and the monitor,
+// little pulses run along to each of them.
+function drawCaptioner(g, t) {
+  const hub = subsHubTable;
+  const emergency = storyDevice === "emergency";
+  const flash = emergency && Math.sin(t * 8) > 0;
+  const shake = emergency ? Math.sin(t * 55) * 1.6 : 0;
 
-function drawSubsRoom(g, t) {
-  const active = (id) => storyDevice === id;
-  const pulse = 0.5 + Math.sin(t * 3) * 0.5;
-
-  // A cozy living room: honey-wood floor, cream walls, a sage rug by the sofa
-  drawRoomShell(g, SUBS, {
-    floorA: "#ecd3b0", floorB: "#e6caa4", seam: "rgba(120,80,45,0.25)",
-    wall: "#efe2c8", wallTrim: "#f8efdc", doorway: "#f7efe0", mat: "#e9b27d",
-    rugs: [() => {
+  // Pulses travelling out to the TV and the monitor
+  if (storyDevice === "oven" || emergency) {
+    const color = emergency ? "255,90,70" : "242,179,107";
+    const targets = [
+      { x: subsScreen.x + subsScreen.w / 2, y: subsScreen.y + subsScreen.h },
+      { x: subsMonitor.x + subsMonitor.w / 2, y: subsMonitor.y + subsMonitor.h + 26 },
+    ];
+    targets.forEach((to, k) => {
+      g.save();
+      g.setLineDash([3, 7]);
+      g.strokeStyle = `rgba(${color},0.35)`;
+      g.lineWidth = 2;
       g.beginPath();
-      g.ellipse(450, 300, 220, 110, 0, 0, Math.PI * 2);
-      g.fillStyle = "#c8dcaa";
-      g.fill();
-      ink(g, 2);
-      g.strokeStyle = "#a9c485";
+      g.moveTo(hub.x, hub.y - 23);
+      g.lineTo(to.x, to.y);
+      g.stroke();
+      g.restore();
+      for (let i = 0; i < 3; i++) {
+        const ph = (t * 0.7 + i / 3 + k * 0.17) % 1;
+        g.fillStyle = `rgba(${color},${0.9 * Math.min(1, (1 - ph) * 3)})`;
+        g.beginPath();
+        g.arc(hub.x + (to.x - hub.x) * ph, hub.y - 23 + (to.y - hub.y + 23) * ph, 3.2, 0, Math.PI * 2);
+        g.fill();
+      }
+    });
+  }
+
+  // Rumble: red rings spreading across the floor from the coffee table
+  if (emergency) {
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 0.9 + i / 3) % 1;
+      g.strokeStyle = `rgba(214,58,46,${0.55 * (1 - ph)})`;
       g.lineWidth = 3;
       g.beginPath();
-      g.ellipse(450, 300, 200, 94, 0, 0, Math.PI * 2);
+      g.ellipse(hub.x, hub.y, 40 + ph * 150, (40 + ph * 150) * 0.55, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+  }
+
+  drawSideTable(g, hub);
+
+  const ringColor = emergency ? (flash ? "#ff5a46" : "#9b2a22")
+    : storyDevice === "name" ? ROOMMATE_COLOR
+      : storyDevice === "oven" ? "#f2b36b"
+        : "#fff1d6";
+  const breathe = 0.5 + Math.sin(t * 1.6) * 0.5;
+  const glow = emergency ? (flash ? "rgba(255,80,60,0.75)" : "rgba(255,80,60,0.2)")
+    : storyDevice === "name" ? `rgba(95,199,184,${0.45 + breathe * 0.3})`
+      : storyDevice === "oven" ? "rgba(242,179,107,0.5)"
+        : `rgba(255,236,200,${0.25 + breathe * 0.2})`;
+  softGlow(g, hub.x, hub.y - 20, storyDevice ? 120 : 70, glow);
+
+  // The tube: a fabric-covered cylinder, lying on its side on the table
+  const half = 30, r = 13, cy = hub.y - 10, capRx = 6;
+  const left = hub.x - half, right = hub.x + half, top = cy - r;
+  g.save();
+  g.translate(shake, 0);
+  g.fillStyle = "rgba(60,40,20,0.25)";
+  g.beginPath();
+  g.ellipse(hub.x + 3, cy + r + 1, half + 4, 5, 0, 0, Math.PI * 2);
+  g.fill();
+  const body = () => {
+    g.beginPath();
+    g.moveTo(left, top);
+    g.lineTo(right, top);
+    g.ellipse(right, cy, capRx, r, 0, -Math.PI / 2, Math.PI / 2);
+    g.lineTo(left, cy + r);
+    g.ellipse(left, cy, capRx, r, 0, Math.PI / 2, Math.PI * 1.5);
+    g.closePath();
+  };
+  const shade = g.createLinearGradient(0, top, 0, cy + r);
+  shade.addColorStop(0, "#f6efe2");
+  shade.addColorStop(0.5, "#e9dfcc");
+  shade.addColorStop(1, "#c9bca4");
+  body();
+  g.fillStyle = shade;
+  g.fill();
+  // Speaker fabric: rows of tiny dots
+  g.save();
+  body();
+  g.clip();
+  g.fillStyle = "rgba(90,70,50,0.18)";
+  for (let yy = top + 2; yy < cy + r; yy += 3) {
+    for (let xx = left - capRx + ((yy - top) % 6 ? 1.5 : 0); xx < right + capRx; xx += 3) {
+      g.fillRect(xx, yy, 1, 1);
+    }
+  }
+  g.restore();
+  body();
+  ink(g, 2);
+
+  // The near end, with its ring of light (and the far end's, peeking round)
+  g.beginPath();
+  g.ellipse(right, cy, capRx, r, 0, 0, Math.PI * 2);
+  g.fillStyle = "#efe6d6";
+  g.fill();
+  ink(g, 1.6);
+  g.beginPath();
+  g.ellipse(right, cy, capRx - 1.8, r - 3, 0, 0, Math.PI * 2);
+  g.strokeStyle = ringColor;
+  g.lineWidth = 2.4;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(left, cy, capRx - 1.8, r - 3, 0, Math.PI / 2, Math.PI * 1.5);
+  g.stroke();
+  if (storyDevice === "oven") {
+    // A bright arc sweeping round while it sends the reminder
+    g.strokeStyle = "#ffffff";
+    g.lineCap = "round";
+    g.beginPath();
+    g.ellipse(right, cy, capRx - 1.8, r - 3, 0, t * 4, t * 4 + 1.2);
+    g.stroke();
+  }
+
+  // The wide screen along its front
+  const sw = half * 2 - 6, sh = 14, sx = hub.x - sw / 2 - 2, sy = cy - sh / 2 + 1;
+  roundRect(g, sx, sy, sw, sh, 3.5);
+  g.fillStyle = emergency ? (flash ? "#d63a2e" : "#7a1f1a") : "#1f2b36";
+  g.fill();
+  ink(g, 1.2);
+  g.save();
+  roundRect(g, sx, sy, sw, sh, 3.5);
+  g.clip();
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  const mid = { x: sx + sw / 2, y: sy + sh / 2 + 0.5 };
+  if (emergency) {
+    g.fillStyle = "#ffffff";
+    g.font = "800 6.2px Inter, sans-serif";
+    g.fillText("! SMOKE ALARM !", mid.x, mid.y);
+  } else if (storyDevice === "name") {
+    g.fillStyle = ROOMMATE_COLOR;
+    g.font = "700 8px Inter, sans-serif";
+    g.fillText("“jamie!”", mid.x, mid.y);
+  } else if (storyDevice === "oven") {
+    g.fillStyle = "#f2b36b";
+    g.font = "700 6.2px Inter, sans-serif";
+    g.fillText("the oven is done", mid.x, mid.y);
+  } else {
+    // Listening: a little sound wave across the screen
+    g.fillStyle = "rgba(255,236,200,0.85)";
+    for (let k = 0; k < 14; k++) {
+      const h = 2 + Math.abs(Math.sin(t * 3 + k * 0.7)) * 7;
+      g.fillRect(sx + 5 + k * 3.6, mid.y - h / 2, 1.6, h);
+    }
+  }
+  g.restore();
+  g.restore();
+
+  if (storyDevice === "name") {
+    const ph = (deviceTime * 0.5) % 1;
+    drawCaption(g, "“jamie!”", hub.x, top - 22 - ph * 18, 13, Math.min(1, (1 - ph) * 2));
+  }
+}
+
+function drawSubsRoom(g, t) {
+  // Quaint but modern, and kept simple: pale oak floor, warm white walls,
+  // and a soft oatmeal rug under the sofa and the coffee table
+  drawRoomShell(g, SUBS, {
+    floorA: "#f1e4cf", floorB: "#ecdcc3", seam: "rgba(150,115,75,0.16)",
+    wall: "#f1e8d9", wallTrim: "#faf5ec", doorway: "#f7efe0", mat: "#c9a27a",
+    rugs: [() => {
+      g.beginPath();
+      g.ellipse(450, 360, 225, 120, 0, 0, Math.PI * 2);
+      g.fillStyle = "#e6d8c0";
+      g.fill();
+      ink(g, 2);
+      g.strokeStyle = "#c98a5f";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.ellipse(450, 360, 208, 105, 0, 0, Math.PI * 2);
       g.stroke();
     }],
   });
 
-  // Kitchen counter in the corner, with the kettle on the stove
+  // The kitchen, in the top left corner: a short run of sage cabinets under
+  // a pale counter, with the oven built in. When the oven's done, its
+  // display blinks, its window glows and a little heat shimmers off the top.
   const c = subsCounter;
-  g.fillStyle = "rgba(60,40,20,0.18)";
-  roundRect(g, c.x + 3, c.y + 6, c.w, c.h, 6);
+  const ovenDone = storyDevice === "oven";
+  const top = 9; // the counter top
+  g.fillStyle = "rgba(60,40,20,0.14)";
+  roundRect(g, c.x + 3, c.y + 5, c.w, c.h, 5);
   g.fill();
-  roundRect(g, c.x, c.y, c.w, c.h, 6);
-  g.fillStyle = "#c08a58";
+  roundRect(g, c.x, c.y, c.w, c.h, 5);
+  g.fillStyle = "#a9bfa3";
   g.fill();
-  ink(g, 2.5);
-  roundRect(g, c.x + 6, c.y + 6, c.w - 12, c.h - 12, 4);
-  g.fillStyle = "#f4ead8";
-  g.fill();
-  ink(g, 1.5);
-  g.beginPath();
-  g.arc(c.x + 50, c.y + 29, 15, 0, Math.PI * 2);
-  g.fillStyle = "#4a4038";
-  g.fill();
-  ink(g, 1.5);
-  const kx = c.x + 50, ky = c.y + 27;
-  g.beginPath();
-  g.arc(kx, ky - 9, 6, Math.PI, 0);
-  g.strokeStyle = INK;
-  g.lineWidth = 2.5;
-  g.stroke();
-  g.beginPath();
-  g.arc(kx, ky, 11, 0, Math.PI * 2);
-  g.fillStyle = "#e07a2f";
+  ink(g, 2.2);
+  roundRect(g, c.x - 2, c.y, c.w + 4, top, 3);
+  g.fillStyle = "#f7f2e9";
   g.fill();
   ink(g, 1.6);
-  g.beginPath();
-  g.moveTo(kx + 9, ky - 3);
-  g.lineTo(kx + 17, ky - 8);
-  g.lineWidth = 3;
-  g.strokeStyle = INK;
-  g.stroke();
-  if (active("screen")) {
-    // Steam curling off the kettle
+  // Cabinet doors either side of the oven, with slim brass pulls
+  const ovenX = c.x + 58, ovenW = 56;
+  [[c.x + 6, 46], [ovenX + ovenW + 6, c.x + c.w - 6 - (ovenX + ovenW + 6)]].forEach(([cx, cw]) => {
+    roundRect(g, cx, c.y + top + 4, cw, c.h - top - 9, 3);
+    g.strokeStyle = "rgba(62,50,38,0.35)";
+    g.lineWidth = 1.2;
+    g.stroke();
+    g.fillStyle = "#c9a45a";
+    roundRect(g, cx + cw / 2 - 6, c.y + top + 9, 12, 2.5, 1);
+    g.fill();
+  });
+  // The oven
+  roundRect(g, ovenX, c.y + top + 3, ovenW, c.h - top - 7, 3);
+  g.fillStyle = "#3a3632";
+  g.fill();
+  ink(g, 1.6);
+  g.fillStyle = "#c9a45a";
+  roundRect(g, ovenX + 8, c.y + top + 7, ovenW - 16, 2.5, 1); // handle
+  g.fill();
+  roundRect(g, ovenX + 7, c.y + top + 14, ovenW - 14, c.h - top - 25, 3); // window
+  g.fillStyle = ovenDone ? "#f2a55a" : "#5a524a";
+  g.fill();
+  roundRect(g, ovenX + ovenW / 2 - 7, c.y + c.h - 8, 14, 4, 1.5); // display
+  g.fillStyle = ovenDone && Math.sin(t * 6) > 0 ? "#ffcf7a" : "#1f1c19";
+  g.fill();
+  if (ovenDone) {
+    softGlow(g, ovenX + ovenW / 2, c.y + c.h / 2 + 4, 40, "rgba(255,170,80,0.35)");
     for (let i = 0; i < 3; i++) {
-      const ph = (t * 0.8 + i / 3) % 1;
-      g.fillStyle = `rgba(255,255,255,${0.7 * (1 - ph)})`;
+      const ph = (t * 0.6 + i / 3) % 1;
+      g.strokeStyle = `rgba(230,150,80,${0.55 * (1 - ph)})`;
+      g.lineWidth = 2;
+      const hx = ovenX + 12 + i * 16, hy = c.y - 4 - ph * 26;
       g.beginPath();
-      g.arc(kx + 19 + Math.sin(ph * 6 + i) * 4, ky - 10 - ph * 34, 4 + ph * 6, 0, Math.PI * 2);
-      g.fill();
+      g.moveTo(hx, hy + 8);
+      g.quadraticCurveTo(hx + 4, hy + 4, hx, hy);
+      g.quadraticCurveTo(hx - 4, hy - 4, hx, hy - 8);
+      g.stroke();
     }
   }
-  g.beginPath();
-  g.arc(c.x + 125, c.y + 29, 8, 0, Math.PI * 2);
-  g.fillStyle = "#8fc1e3";
+  // A little pot of herbs on the counter
+  const hx = c.x + c.w - 22;
+  roundRect(g, hx - 6, c.y - 6, 12, 10, 2);
+  g.fillStyle = "#c98a5f";
   g.fill();
-  ink(g, 1.5);
-
-  // The big screen on the back wall: a calm picture, or captions of the
-  // sounds around the house while Jamie shows it off
-  const sc = subsScreen;
-  softGlow(g, sc.x + sc.w / 2, sc.y + sc.h, 280, "rgba(255,220,160,0.3)");
-  roundRect(g, sc.x, sc.y, sc.w, sc.h, 10);
-  g.fillStyle = "#8a5a34";
-  g.fill();
-  ink(g, 2.5);
-  const glass = g.createLinearGradient(0, sc.y, 0, sc.y + sc.h);
-  glass.addColorStop(0, "#35536f");
-  glass.addColorStop(1, "#1d2e40");
-  g.fillStyle = glass;
-  roundRect(g, sc.x + 8, sc.y + 8, sc.w - 16, sc.h - 16, 6);
-  g.fill();
-  ink(g, 1.8);
-  g.fillStyle = "rgba(246,178,110,0.55)";
-  g.beginPath();
-  g.arc(sc.x + sc.w - 90, sc.y + 44, 18, 0, Math.PI * 2);
-  g.fill();
-  g.fillStyle = "rgba(143,193,227,0.35)";
-  g.beginPath();
-  g.moveTo(sc.x + 8, sc.y + 92);
-  g.quadraticCurveTo(sc.x + 140, sc.y + 50, sc.x + 260, sc.y + 86);
-  g.quadraticCurveTo(sc.x + 340, sc.y + 62, sc.x + sc.w - 8, sc.y + 84);
-  g.lineTo(sc.x + sc.w - 8, sc.y + sc.h - 8);
-  g.lineTo(sc.x + 8, sc.y + sc.h - 8);
-  g.closePath();
-  g.fill();
-  if (active("screen")) {
-    const i = Math.floor(deviceTime / 2.4) % SCREEN_CAPTIONS.length;
-    const fade = Math.min(1, ((deviceTime % 2.4) / 0.3));
-    const [where, what] = SCREEN_CAPTIONS[i];
-    g.save();
-    g.globalAlpha = fade;
-    g.fillStyle = "#f2b36b";
-    g.font = "700 11px Inter, sans-serif";
-    g.letterSpacing = "2px";
-    g.textAlign = "center";
-    g.textBaseline = "middle";
-    g.fillText(`[ ${where} ]`, sc.x + sc.w / 2, sc.y + 64);
-    g.letterSpacing = "0px";
-    g.restore();
-    drawCaption(g, what, sc.x + sc.w / 2, sc.y + 94, 20, fade);
-  }
-
-  // Sofa facing the screen
-  g.fillStyle = "rgba(60,40,20,0.18)";
-  roundRect(g, subsSofa.x + 3, subsSofa.y + 6, subsSofa.w, subsSofa.h, 14);
-  g.fill();
-  roundRect(g, subsSofa.x, subsSofa.y, subsSofa.w, subsSofa.h, 14);
-  g.fillStyle = "#d98b5a";
-  g.fill();
-  ink(g, 2.5);
-  for (let i = 0; i < 3; i++) {
-    roundRect(g, subsSofa.x + 12 + i * 74, subsSofa.y + 8, 68, 26, 8);
-    g.fillStyle = "#f1c39a";
+  ink(g, 1.2);
+  [[-3, -10], [0, -13], [3, -10]].forEach(([lx, ly]) => {
+    g.beginPath();
+    g.ellipse(hx + lx, c.y + ly, 2.6, 4, lx * 0.15, 0, Math.PI * 2);
+    g.fillStyle = "#7fa36a";
     g.fill();
-    ink(g, 1.5);
-  }
+  });
 
-  // The name lamp on its side table: glowing her roommate's colour when it
-  // hears "jamie!"
-  const lt = subsLampTable;
-  drawSideTable(g, lt);
-  if (active("lamp")) softGlow(g, lt.x, lt.y - 6, 110, `rgba(95,199,184,${0.3 + pulse * 0.3})`);
+  // The smoke alarm, which flashes along with the captioner in an emergency
+  const al = subsAlarm;
+  const alarmOn = storyDevice === "emergency" && Math.sin(t * 8) > 0;
+  if (alarmOn) softGlow(g, al.x, al.y + 6, 40, "rgba(255,80,60,0.45)");
   g.beginPath();
-  g.arc(lt.x, lt.y - 6, 13, 0, Math.PI * 2);
-  g.fillStyle = active("lamp") ? "#7fd9cc" : "#f3dcb4";
-  g.fill();
-  ink(g, 1.8);
-  g.beginPath();
-  g.arc(lt.x, lt.y - 6, 4, 0, Math.PI * 2);
-  g.fillStyle = active("lamp") ? "#e9fffb" : "#d9b98c";
-  g.fill();
-  if (active("lamp")) {
-    const ph = (deviceTime * 0.5) % 1;
-    drawCaption(g, "“jamie!”", lt.x, lt.y - 46 - ph * 18, 13, Math.min(1, (1 - ph) * 2));
-  }
-
-  // The bed in the corner, with the pillow shaker under the pillow. It
-  // shakes the whole bed, and the smoke alarm above it flashes, while Jamie
-  // talks about it.
-  const b = subsBed;
-  const shaking = active("pillow");
-  const shake = shaking ? Math.sin(t * 55) * 1.8 : 0;
-  g.save();
-  g.translate(shake, 0);
-  g.fillStyle = "rgba(60,40,20,0.18)";
-  roundRect(g, b.x + 3, b.y + 6, b.w, b.h, 10);
-  g.fill();
-  roundRect(g, b.x, b.y, b.w, b.h, 10);
-  g.fillStyle = "#a8744a";
-  g.fill();
-  ink(g, 2.5);
-  roundRect(g, b.x + 8, b.y + 14, b.w - 16, b.h - 22, 8);
-  g.fillStyle = "#fdf7ea";
-  g.fill();
-  ink(g, 1.5);
-  roundRect(g, b.x + 8, b.y + 76, b.w - 16, b.h - 84, 8);
-  g.fillStyle = "#8fb7d6";
-  g.fill();
-  ink(g, 1.5);
-  g.strokeStyle = "rgba(255,255,255,0.45)";
-  g.lineWidth = 2;
-  g.beginPath();
-  for (let y = b.y + 92; y < b.y + b.h - 14; y += 16) {
-    g.moveTo(b.x + 14, y);
-    g.lineTo(b.x + b.w - 14, y);
-  }
-  g.stroke();
-  roundRect(g, b.x + b.w / 2 - 16, b.y + 52, 32, 12, 4); // the shaker pad, peeking out
-  g.fillStyle = "#5b8fa8";
-  g.fill();
-  ink(g, 1.3);
-  roundRect(g, b.x + 22, b.y + 22, b.w - 44, 36, 12);
-  g.fillStyle = "#ffffff";
-  g.fill();
-  ink(g, 1.5);
-  g.restore();
-  if (shaking) {
-    g.strokeStyle = `rgba(91,143,168,${0.4 + pulse * 0.5})`;
-    g.lineWidth = 2;
-    g.lineCap = "round";
-    [-1, 1].forEach((side) => {
-      [0, 1].forEach((n) => {
-        g.beginPath();
-        g.arc(b.x + b.w / 2 + side * (b.w / 2 + 6 + n * 8), b.y + 42, 10 + n * 6,
-          side > 0 ? -0.6 : Math.PI - 0.6, side > 0 ? 0.6 : Math.PI + 0.6);
-        g.stroke();
-      });
-    });
-  }
-  const alarmX = b.x - 34, alarmY = 13;
-  if (shaking && Math.sin(t * 8) > 0) softGlow(g, alarmX, alarmY + 6, 40, "rgba(255,80,60,0.45)");
-  g.beginPath();
-  g.arc(alarmX, alarmY, 9, 0, Math.PI * 2);
+  g.arc(al.x, al.y, 9, 0, Math.PI * 2);
   g.fillStyle = "#f6f3ea";
   g.fill();
   ink(g, 1.6);
   g.beginPath();
-  g.arc(alarmX, alarmY, 2.6, 0, Math.PI * 2);
-  g.fillStyle = shaking && Math.sin(t * 8) > 0 ? "#ff4d3d" : "#b9a58c";
+  g.arc(al.x, al.y, 2.6, 0, Math.PI * 2);
+  g.fillStyle = alarmOn ? "#ff4d3d" : "#b9a58c";
   g.fill();
 
-  // The jasmine doorbell on its little table by the front door
-  const st = subsScentTable;
-  drawSideTable(g, st);
-  roundRect(g, st.x - 8, st.y - 16, 16, 20, 5);
-  g.fillStyle = "rgba(246,214,160,0.95)";
-  g.fill();
-  ink(g, 1.5);
-  g.fillStyle = "rgba(255,255,255,0.6)";
-  roundRect(g, st.x - 5, st.y - 13, 3, 12, 1.5);
-  g.fill();
-  g.beginPath();
-  g.rect(st.x - 3, st.y - 22, 6, 6);
-  g.fillStyle = "#d9b25a";
-  g.fill();
-  ink(g, 1.2);
-  g.beginPath();
-  g.arc(st.x + 7, st.y - 21, 3.6, 0, Math.PI * 2);
-  g.fillStyle = "#e8889a";
-  g.fill();
-  ink(g, 1.2);
-
-  // The bench by the door, with Jamie's bag and its siren clip
-  const bn = subsBench;
-  g.fillStyle = "rgba(60,40,20,0.18)";
-  roundRect(g, bn.x + 3, bn.y + 6, bn.w, bn.h, 8);
-  g.fill();
-  roundRect(g, bn.x, bn.y, bn.w, bn.h, 8);
-  g.fillStyle = "#a8744a";
+  // The TV on the back wall: a calm picture, unless the captioner has
+  // something to say
+  const sc = subsScreen;
+  softGlow(g, sc.x + sc.w / 2, sc.y + sc.h, 280, "rgba(255,220,160,0.25)");
+  roundRect(g, sc.x, sc.y, sc.w, sc.h, 6);
+  g.fillStyle = "#2b2724";
   g.fill();
   ink(g, 2.2);
-  g.strokeStyle = "rgba(62,50,38,0.35)";
-  g.lineWidth = 1.2;
-  g.beginPath();
-  g.moveTo(bn.x + 6, bn.y + bn.h / 2);
-  g.lineTo(bn.x + bn.w - 6, bn.y + bn.h / 2);
-  g.stroke();
-  if (!jamieJoined) drawBenchBag(g, bn, active("clip"), t);
+  drawScreenFeed(g, sc.x + 5, sc.y + 5, sc.w - 10, sc.h - 10, 1, t, (x, y, w, h) => {
+    g.fillStyle = "rgba(246,178,110,0.55)";
+    g.beginPath();
+    g.arc(x + w - 82, y + 36, 18, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(143,193,227,0.35)";
+    g.beginPath();
+    g.moveTo(x, y + 84);
+    g.quadraticCurveTo(x + 132, y + 42, x + 252, y + 78);
+    g.quadraticCurveTo(x + 332, y + 54, x + w, y + 76);
+    g.lineTo(x + w, y + h);
+    g.lineTo(x, y + h);
+    g.closePath();
+    g.fill();
+  });
 
-  subsPlants.forEach((p) => drawPottedPlant(g, p));
-}
-
-// Jamie's bag on the bench, with the siren clip blinking orange while she talks about it.
-function drawBenchBag(g, bn, clipActive, t) {
-  g.beginPath();
-  g.arc(bn.x + 56, bn.y - 6, 14, Math.PI, 0);
-  g.strokeStyle = INK;
-  g.lineWidth = 4;
-  g.stroke();
-  g.strokeStyle = "#c98a4f";
-  g.lineWidth = 2;
-  g.stroke();
-  roundRect(g, bn.x + 30, bn.y - 8, 52, 38, 8);
-  g.fillStyle = "#e3b27a";
+  // Jamie's desk, with the monitor on it and a chair pulled up
+  const d = subsDesk;
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, d.x + 3, d.y + 6, d.w, d.h, 6);
   g.fill();
-  ink(g, 2);
-  const cx = bn.x + 72, cy = bn.y + 6;
-  const blinking = clipActive && Math.sin(t * 9) > 0;
-  if (blinking) softGlow(g, cx, cy, 46, "rgba(255,138,42,0.6)");
-  roundRect(g, cx - 8, cy - 8, 16, 16, 5);
+  roundRect(g, d.x, d.y, d.w, d.h, 6);
+  g.fillStyle = "#d9bb8f";
+  g.fill();
+  ink(g, 2.2);
+  roundRect(g, d.x + 26, d.y + 38, 56, 12, 3); // keyboard
+  g.fillStyle = "#f4ead8";
+  g.fill();
+  ink(g, 1.2);
+  g.beginPath();
+  g.arc(d.x + 140, d.y + 42, 8, 0, Math.PI * 2); // a mug
+  g.fillStyle = "#f7f2e9";
+  g.fill();
+  ink(g, 1.2);
+  const m = subsMonitor;
+  roundRect(g, m.x + m.w / 2 - 12, m.y + m.h - 2, 24, 10, 2); // stand
+  g.fillStyle = "#4a4038";
+  g.fill();
+  ink(g, 1.2);
+  roundRect(g, m.x, m.y, m.w, m.h, 6);
   g.fillStyle = "#3e3226";
   g.fill();
-  ink(g, 1.4);
-  g.beginPath();
-  g.arc(cx, cy, 4.2, 0, Math.PI * 2);
-  g.fillStyle = blinking ? "#ff8a2a" : "#8a5a34";
-  g.fill();
-}
-
-// Puffs of jasmine mist, and little flowers, drifting up from the bottle.
-// Drawn over the characters, so the scent fills the room.
-function drawScentMist(g) {
-  if (storyDevice !== "scent") return;
-  const { x, y } = subsScentTable;
-  const appear = Math.min(1, deviceTime * 1.5);
-  for (let k = 0; k < 14; k++) {
-    const ph = (deviceTime * 0.4 + k / 14) % 1;
-    const px = x + 4 + Math.sin(k * 2.3 + ph * 3) * (8 + ph * 70);
-    const py = y - 24 - ph * 170;
-    const alpha = (1 - ph) * appear;
-    g.fillStyle = `rgba(255,255,255,${0.45 * alpha})`;
-    g.beginPath();
-    g.arc(px, py, 6 + ph * 20, 0, Math.PI * 2);
+  ink(g, 2.2);
+  drawScreenFeed(g, m.x + 5, m.y + 5, m.w - 10, m.h - 10, 0.58, t, (x, y, w) => {
+    // A document Jamie was working on
+    g.fillStyle = "rgba(246,239,226,0.85)";
+    roundRect(g, x + 14, y + 6, w - 28, 54, 3);
     g.fill();
-    if (k % 3 === 0) drawJasmine(g, px, py, 0.8 + ph * 0.6, alpha);
+    g.fillStyle = "rgba(62,50,38,0.35)";
+    [0, 1, 2, 3].forEach((k) => g.fillRect(x + 22, y + 14 + k * 10, (w - 44) * [1, 0.8, 0.9, 0.5][k], 3));
+  });
+  const ch = subsDeskChair;
+  g.beginPath();
+  g.arc(ch.x, ch.y, ch.r, 0, Math.PI * 2);
+  g.fillStyle = "#a9bfa3";
+  g.fill();
+  ink(g, 2);
+  roundRect(g, ch.x - 14, ch.y + 8, 28, 8, 3);
+  g.fillStyle = "#8ea889";
+  g.fill();
+  ink(g, 1.4);
+
+  // Sofa facing the TV
+  g.fillStyle = "rgba(60,40,20,0.18)";
+  roundRect(g, subsSofa.x + 3, subsSofa.y + 6, subsSofa.w, subsSofa.h, 14);
+  g.fill();
+  roundRect(g, subsSofa.x, subsSofa.y, subsSofa.w, subsSofa.h, 14);
+  g.fillStyle = "#d8c7ad";
+  g.fill();
+  ink(g, 2.2);
+  for (let i = 0; i < 2; i++) {
+    roundRect(g, subsSofa.x + 12 + i * 110, subsSofa.y + 8, 106, 26, 9);
+    g.fillStyle = "#e8dcc8";
+    g.fill();
+    ink(g, 1.4);
   }
+  [subsSofa.x + 26, subsSofa.x + subsSofa.w - 26].forEach((px) => {
+    roundRect(g, px - 10, subsSofa.y + 6, 20, 16, 5);
+    g.fillStyle = "#c98a5f";
+    g.fill();
+    ink(g, 1.3);
+  });
+
+  drawCaptioner(g, t);
+
+  subsPlants.forEach((p) => drawPottedPlant(g, p));
 }
 
 function renderSubs(now) {
@@ -3270,15 +4100,14 @@ function renderSubs(now) {
   g.save();
   g.shadowColor = "rgba(62,50,38,0.22)";
   g.shadowBlur = 40;
-  g.fillStyle = "#efe2c8";
+  g.fillStyle = "#f1e8d9";
   g.fillRect(0, 0, SUBS.w, SUBS.h);
   g.restore();
 
   drawSubsRoom(g, t);
-  [jamie, alyssa]
+  [jamie, anna]
     .sort((a, b) => a.y - b.y)
     .forEach((ch) => drawCharacter(g, ch, ch.x, ch.y, 1.4, animPhase, !!ch.moving));
-  drawScentMist(g);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -3294,47 +4123,65 @@ const CAFE_MOVE_SPEED = 150;
 const cafeCounter = { x: 56, y: 26, w: 320, h: 78 };
 const cafeStools = [110, 180, 250, 320].map((x) => ({ x, y: 128 }));
 
-// The friends' table in the middle of the room, and two smaller tables to
-// hang out at. Every table has a 360° caption screen at its centre.
-const cafeFriendsTable = { x: 450, y: 320, r: 70 };
-const cafeRoundTables = [{ x: 760, y: 220, r: 40 }, { x: 760, y: 480, r: 40 }];
+// The friends' table in the top right corner, and three smaller tables to
+// hang out at, spread well apart with the middle of the room left open.
+// Every table has a 360° caption screen at its centre, and is round, so
+// everyone can see everyone else's face, and every one sits in a high-backed
+// booth that blocks noise from behind.
+const cafeFriendsTable = { x: 730, y: 220, r: 52 };
+const cafeRoundTables = [{ x: 500, y: 200, r: 40 }, { x: 560, y: 470, r: 40 }, { x: 760, y: 480, r: 40 }];
+const cafeBoothTables = [cafeFriendsTable, ...cafeRoundTables];
 
-// The reading corner: a rug, a tall bookshelf on the wall, floor cushions
-// and a "quiet light".
+// The table nearest the door, where Anna and Jamie can sit down and chat:
+// Anna on the chair, Jamie across from her on the booth.
+const cafeChatTable = cafeRoundTables[1];
+const CAFE_ANNA_SEAT = { x: cafeChatTable.x - 58, y: cafeChatTable.y, facing: "right" };
+const CAFE_JAMIE_SEAT = { x: cafeChatTable.x + 72, y: cafeChatTable.y - 18, facing: "left" };
+const CAFE_SIT_REACH = 80;
+const CAFE_CHAT_TURN = 2.2; // seconds each of them talks before the other jumps in
+const CAFE_FRIENDS_CAPTION_SECONDS = 10; // how long the friends' captions show after you walk in
+const CAFE_BOOTH_GAP = 46; // from a table's centre to the inside of its booth, past its edge
+
+// The reading corner: a rug, a tall bookshelf on the wall and floor cushions.
 const cafeReadingRug = { x: 150, y: 470, r: 112 };
 const cafeBookshelf = { x: 30, y: 340, w: 30, h: 200 };
-const cafeQuietLamp = { x: 252, y: 400, r: 11 };
-const cafeRhythmWall = { x: 850, y: 290, w: 24, h: 120 };
-const cafePlants = [{ x: 62, y: 595 }, { x: 838, y: 595 }, { x: 838, y: 110 }];
+const cafePlants = [{ x: 62, y: 595 }, { x: 838, y: 595 }, { x: 640, y: 62 }];
+
+// Felt and wood-slat panels on the walls, so voices are soaked up instead of
+// bouncing around the room.
+const cafeSoundPanels = [
+  { x: 26, y: 150, w: 16, h: 170 },
+  { x: 858, y: 140, w: 16, h: 120 },
+  { x: 858, y: 300, w: 16, h: 120 },
+  { x: 858, y: 440, w: 16, h: 110 },
+  { x: 110, y: 598, w: 250, h: 16 },
+  { x: 540, y: 598, w: 250, h: 16 },
+];
 
 // Chairs: `back` is the side the backrest sits on (away from the table).
+// Every table has its booth on one side and chairs on the other.
 const cafeChairs = [
-  { x: 450, y: 222, back: "up" },
-  { x: 450, y: 418, back: "down" },
-  { x: 352, y: 320, back: "left" },
-  { x: 548, y: 320, back: "right" },
-  ...cafeRoundTables.flatMap((t) => [
-    { x: t.x - 58, y: t.y, back: "left" },
-    { x: t.x + 58, y: t.y, back: "right" },
-  ]),
+  { x: 685, y: 166, back: "up" },
+  { x: 685, y: 274, back: "down" },
+  ...cafeRoundTables.map((t) => ({ x: t.x - 58, y: t.y, back: "left" })),
 ];
 
 // Four friends hanging out, their conversation captioned on the table's screen.
 const cafeFriends = [
   {
-    name: "Maya", color: "#f2b36b", x: 450, y: 226, facing: "down",
+    name: "Maya", color: "#f2b36b", x: 685, y: 166, facing: "down",
     palette: { skin: "#d9a27a", hair: "#2b2320", hairStyle: "medium", outfit: "#6b5b8c", outfitTrim: "#e9e1f2" },
   },
   {
-    name: "Theo", color: "#8fd3c7", x: 548, y: 324, facing: "left",
+    name: "Theo", color: "#8fd3c7", x: 781, y: 159, facing: "down",
     palette: { skin: "#f2d0b0", hair: "#b5793f", hairStyle: "short", outfit: "#c9a24a", outfitTrim: "#f5ecd6" },
   },
   {
-    name: "Priya", color: "#f0a3c4", x: 450, y: 420, facing: "up",
+    name: "Priya", color: "#f0a3c4", x: 781, y: 281, facing: "up",
     palette: { skin: "#8d5a3b", hair: "#1d1713", hairStyle: "medium", outfit: "#4f7a78", outfitTrim: "#e1efe9" },
   },
   {
-    name: "Sam", color: "#b7a6f0", x: 352, y: 324, facing: "right",
+    name: "Sam", color: "#b7a6f0", x: 685, y: 274, facing: "up",
     palette: { skin: "#c98a55", hair: "#3a2419", hairStyle: "short", outfit: "#a6523f", outfitTrim: "#f7dfd2" },
   },
 ];
@@ -3378,37 +4225,15 @@ const CAFE_HEARING_AIDS = [
   if (aid) [p.hearingAid, p.hearingAidPair] = aid;
 });
 
-// "Subtitles for the World" around the cafe: walk up to one and a card
-// explains what it does. `x`/`y` is where its marker sits; `reach` is how
-// close Alyssa needs to be.
-const cafeTech = [
-  {
-    id: "table", name: "360° caption screen", x: cafeFriendsTable.x, y: cafeFriendsTable.y - 6, reach: 150,
-    description: "Every table has one. It captions the conversation around it, facing every seat, so everyone can follow along even when people talk over each other.",
-  },
-  {
-    id: "coaster", name: "Order coasters", x: 356, y: 62, reach: 100,
-    description: "Instead of calling names over the noise, the barista hands you a coaster that glows and buzzes when your drink is ready.",
-  },
-  {
-    id: "rhythm", name: "Rhythm wall", x: cafeRhythmWall.x + 6, y: cafeRhythmWall.y + cafeRhythmWall.h / 2, reach: 100,
-    description: "Lights that move with the music's beat and bass, so you can see the song as well as hear it.",
-  },
-  {
-    id: "quiet", name: "Quiet light", x: cafeQuietLamp.x, y: cafeQuietLamp.y - 8, reach: 90,
-    description: "Glows green when the reading corner is calm and amber when the room gets loud, so anyone can find the easiest spot to hear and be heard.",
-  },
-];
-
 // Hanging paper lanterns (and table candles): the room's only light.
 const cafeLanterns = [
-  { x: 400, y: 300, r: 210 },
-  { x: 500, y: 340, r: 210 },
+  { x: 640, y: 215, r: 200 },
+  { x: 450, y: 145, r: 150 },
+  { x: 520, y: 548, r: 150 },
   { x: 216, y: 170, r: 180 },
-  { x: 760, y: 220, r: 150 },
-  { x: 760, y: 480, r: 150 },
+  { x: 710, y: 425, r: 150 },
   { x: 150, y: 470, r: 190 },
-  { x: 530, y: 560, r: 160 },
+  { x: 400, y: 360, r: 150 },
 ];
 const cafeCandles = cafeRoundTables.map((t) => ({ x: t.x + 18, y: t.y + 14, r: 70 }));
 
@@ -3421,29 +4246,27 @@ const cafeObstacles = [
     x: CAFE.doorX + CAFE.doorW / 2, y: CAFE.h - CAFE.wall,
     w: CAFE.w - (CAFE.doorX + CAFE.doorW / 2), h: CAFE.wall,
   },
-  cafeCounter, cafeBookshelf, cafeRhythmWall,
+  cafeCounter, cafeBookshelf, ...cafeSoundPanels,
   circleBox(cafeFriendsTable),
   ...cafeRoundTables.map((t) => circleBox(t)),
-  circleBox(cafeQuietLamp),
+  ...cafeBoothTables.map((t) => ({ x: t.x, y: t.y - t.r - CAFE_BOOTH_GAP, w: t.r + CAFE_BOOTH_GAP, h: (t.r + CAFE_BOOTH_GAP) * 2 })),
   ...[...cafeFriends, ...cafeReaders].map((p) => ({ x: p.x - 13, y: p.y - 10, w: 26, h: 26 })),
   ...cafePlants.map((p) => circleBox(p, 15)),
 ];
 
 const cafeCanvas = document.getElementById("cafeCanvas");
 const cafeCtx = cafeCanvas.getContext("2d");
-const cafeCardEl = document.getElementById("cafeCard");
 // Offscreen layer for the evening darkness, with holes cut out by each light.
 const cafeLight = document.createElement("canvas");
 const cafeLightCtx = cafeLight.getContext("2d");
 const cafeView = { scale: 1, ox: 0, oy: 0 };
-let cafeActiveTech = null;
 
 function resizeCafeCanvas() {
   [cafeCanvas, cafeLight].forEach((c) => {
     c.width = Math.round(viewW * dpr);
     c.height = Math.round(viewH * dpr);
   });
-  // Fit the room between the header and the hint bar.
+  // Fit the room between the header and the cards along the bottom.
   const top = 76, bottom = 64;
   const s = Math.min((viewW - 32) / CAFE.w, (viewH - top - bottom) / CAFE.h, 1.3);
   cafeView.scale = s;
@@ -3453,8 +4276,17 @@ function resizeCafeCanvas() {
 window.addEventListener("resize", resizeCafeCanvas);
 resizeCafeCanvas();
 
+// Seconds since Anna walked in, whether she's sitting down with Jamie, and
+// how long they've been chatting.
+let cafeTime = 0;
+let cafeSeated = false;
+let cafeChatTime = 0;
+const cafePromptEl = document.getElementById("cafePrompt");
+
 function enterCafe() {
-  const ch = alyssa;
+  const ch = anna;
+  cafeTime = 0;
+  cafeSeated = false;
   ch.x = CAFE.doorX;
   ch.y = CAFE.h - CAFE.wall - 26;
   ch.facing = "up";
@@ -3465,7 +4297,7 @@ function enterCafe() {
 }
 
 function leaveCafe() {
-  const ch = alyssa;
+  const ch = anna;
   const door = doorOf(cafeBuilding);
   ch.x = door.x;
   ch.y = door.y + CHAR_RADIUS + 18;
@@ -3473,15 +4305,40 @@ function leaveCafe() {
   ch.moving = false;
   seedCompanion(32, 2);
   cafeMusic.stop();
-  cafeCardEl.hidden = true;
-  cafeActiveTech = null;
+  cafeSeated = false;
+  cafePromptEl.hidden = true;
   setScene("world");
+}
+
+function nearChatTable() {
+  return Math.hypot(anna.x - CAFE_ANNA_SEAT.x, anna.y - CAFE_ANNA_SEAT.y) < CAFE_SIT_REACH;
+}
+
+// Anna takes the chair and Jamie (if she's along) slides into the booth.
+function sitDownToChat() {
+  cafeSeated = true;
+  cafeChatTime = 0;
+  keys.clear();
+  Object.assign(anna, { x: CAFE_ANNA_SEAT.x, y: CAFE_ANNA_SEAT.y, facing: CAFE_ANNA_SEAT.facing, moving: false });
+  if (jamieJoined) Object.assign(jamie, { x: CAFE_JAMIE_SEAT.x, y: CAFE_JAMIE_SEAT.y, facing: CAFE_JAMIE_SEAT.facing, moving: false });
+  cafePromptEl.hidden = true;
+}
+
+function standUpFromChat() {
+  cafeSeated = false;
+  Object.assign(anna, { x: CAFE_ANNA_SEAT.x, y: CAFE_ANNA_SEAT.y + 56, facing: "down", moving: false });
+  seedCompanion(36, 0);
 }
 
 document.getElementById("cafeBack").addEventListener("click", leaveCafe);
 
 function updateCafe(dt) {
-  const ch = alyssa;
+  const ch = anna;
+  cafeTime += dt;
+  if (cafeSeated) {
+    cafeChatTime += dt;
+    return;
+  }
   stepCharacter(ch, dt, CAFE_MOVE_SPEED, cafeObstacles, CAFE_BOUNDS);
   updateCompanion(dt);
   // Stepping through the doorway takes you back outside.
@@ -3490,26 +4347,72 @@ function updateCafe(dt) {
     return;
   }
 
-  // Explain whichever "subtitle" Alyssa is standing near.
-  let near = null, nearDist = Infinity;
-  cafeTech.forEach((tech) => {
-    const d = Math.hypot(ch.x - tech.x, ch.y - tech.y);
-    if (d < tech.reach && d < nearDist) {
-      near = tech;
-      nearDist = d;
-    }
-  });
-  if (near !== cafeActiveTech) {
-    cafeActiveTech = near;
-    cafeCardEl.hidden = !near;
-    if (near) {
-      cafeCardEl.innerHTML = `
-        <p class="subs-card-option">Subtitles for the World</p>
-        <p class="subs-card-name">${near.name}</p>
-        <p class="subs-card-desc">${near.description}</p>
-      `;
-    }
+  // Near the table by the door: offer to sit down.
+  const near = nearChatTable();
+  cafePromptEl.hidden = !near;
+  if (near) {
+    const { scale: s, ox, oy } = cafeView;
+    cafePromptEl.style.left = `${ox + cafeChatTable.x * s}px`;
+    cafePromptEl.style.top = `${oy + (cafeChatTable.y - cafeChatTable.r - 30) * s}px`;
   }
+}
+
+// Rug colours: [pile, border, pattern] for the friends' table, the three
+// smaller tables and the reading corner.
+const CAFE_RUG_COLORS = [
+  ["#8a3f35", "#6a2c26", "#c27a5c"],
+  ["#3f5f5a", "#2c4642", "#7fa59a"],
+  ["#9a6c30", "#74501f", "#d9b06b"],
+  ["#5e3f55", "#452d3f", "#9a7090"],
+  ["#4f6b52", "#3a523d", "#7f9d7a"],
+];
+
+// A thick, plush round rug: a soft shadow under its raised edge, a darker
+// bound border, a patterned ring, and little tufts all round the edge.
+function drawThickRug(g, x, y, r, [pile, border, pattern]) {
+  g.fillStyle = "rgba(0,0,0,0.35)";
+  g.beginPath();
+  g.arc(x + 3, y + 6, r + 2, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.fillStyle = border;
+  g.fill();
+  ink(g, 2.5);
+  g.beginPath();
+  g.arc(x, y, r - 9, 0, Math.PI * 2);
+  g.fillStyle = pile;
+  g.fill();
+  // The pile, catching the lantern light toward the top
+  const sheen = g.createRadialGradient(x - r * 0.3, y - r * 0.35, 4, x, y, r);
+  sheen.addColorStop(0, "rgba(255,230,190,0.14)");
+  sheen.addColorStop(1, "rgba(0,0,0,0.12)");
+  g.fillStyle = sheen;
+  g.fill();
+  g.strokeStyle = pattern;
+  g.lineWidth = 3;
+  g.setLineDash([10, 6]);
+  g.beginPath();
+  g.arc(x, y, r - 20, 0, Math.PI * 2);
+  g.stroke();
+  g.setLineDash([]);
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.arc(x, y, r - 28, 0, Math.PI * 2);
+  g.stroke();
+  // Tufts round the edge
+  g.strokeStyle = pile;
+  g.lineWidth = 2;
+  g.lineCap = "round";
+  const tufts = Math.round(r * 0.55);
+  g.beginPath();
+  for (let i = 0; i < tufts; i++) {
+    const a = (i / tufts) * Math.PI * 2;
+    g.moveTo(x + Math.cos(a) * (r - 2), y + Math.sin(a) * (r - 2));
+    g.lineTo(x + Math.cos(a) * (r + 3), y + Math.sin(a) * (r + 3));
+  }
+  g.stroke();
+  g.lineCap = "butt";
 }
 
 function drawCafeRoom(g) {
@@ -3520,33 +4423,11 @@ function drawCafeRoom(g) {
     floorA: "#6f4c37", floorB: "#664533", seam: "rgba(20,12,8,0.5)",
     wall: "#4a352b", wallTrim: "#5e4536", doorway: "#221c2b", mat: "#9a6b3f",
     rugs: [
-      () => {
-        // Under the friends' table
-        g.beginPath();
-        g.arc(cafeFriendsTable.x, cafeFriendsTable.y, 150, 0, Math.PI * 2);
-        g.fillStyle = "#8a3f35";
-        g.fill();
-        ink(g, 2.5);
-        g.strokeStyle = "#c27a5c";
-        g.lineWidth = 3;
-        g.beginPath();
-        g.arc(cafeFriendsTable.x, cafeFriendsTable.y, 138, 0, Math.PI * 2);
-        g.stroke();
-      },
-      () => {
-        // The reading corner
-        const r = cafeReadingRug;
-        g.beginPath();
-        g.arc(r.x, r.y, r.r, 0, Math.PI * 2);
-        g.fillStyle = "#4f6b52";
-        g.fill();
-        ink(g, 2.5);
-        g.strokeStyle = "#7f9d7a";
-        g.lineWidth = 2;
-        g.beginPath();
-        g.arc(r.x, r.y, r.r - 14, 0, Math.PI * 2);
-        g.stroke();
-      },
+      // A thick rug under every table (the friends' one in deep red), and
+      // one in the reading corner: they soak up sound underfoot.
+      () => drawThickRug(g, cafeFriendsTable.x, cafeFriendsTable.y, 125, CAFE_RUG_COLORS[0]),
+      ...cafeRoundTables.map((t, i) => () => drawThickRug(g, t.x, t.y, 94, CAFE_RUG_COLORS[i + 1])),
+      () => drawThickRug(g, cafeReadingRug.x, cafeReadingRug.y, cafeReadingRug.r, CAFE_RUG_COLORS[4]),
     ],
   });
 
@@ -3581,14 +4462,54 @@ function drawCafeRoom(g) {
     g.fillRect(bs.x + 5, bs.y + 6 + i * 7.4, 18 + (i % 3) * 2, 5.5);
   }
 
-  // The rhythm wall: a panel of light bars on the right wall (lit up after the lighting pass)
-  const rw = cafeRhythmWall;
-  roundRect(g, rw.x, rw.y, rw.w, rw.h, 5);
-  g.fillStyle = "#2b2230";
-  g.fill();
-  ink(g, 2);
+  // Sound panels: soft felt, faced with wooden slats
+  cafeSoundPanels.forEach((p) => {
+    roundRect(g, p.x, p.y, p.w, p.h, 4);
+    g.fillStyle = "#5b6b55";
+    g.fill();
+    ink(g, 2);
+    g.fillStyle = "#9b6b46";
+    const along = p.h > p.w;
+    for (let k = 6; k < (along ? p.h : p.w) - 4; k += 9) {
+      if (along) g.fillRect(p.x + 3, p.y + k, p.w - 6, 4);
+      else g.fillRect(p.x + k, p.y + 3, 4, p.h - 6);
+    }
+  });
 
   cafePlants.forEach((p) => drawPottedPlant(g, p));
+}
+
+// A high-backed, padded booth curving round the far side of a small table.
+function drawCafeBooth(g, t) {
+  const inner = t.r + CAFE_BOOTH_GAP - 22, outer = t.r + CAFE_BOOTH_GAP;
+  const a0 = -Math.PI * 0.55, a1 = Math.PI * 0.55;
+  g.fillStyle = "rgba(0,0,0,0.25)";
+  g.beginPath();
+  g.arc(t.x + 3, t.y + 6, outer, a0, a1);
+  g.arc(t.x + 3, t.y + 6, inner, a1, a0, true);
+  g.closePath();
+  g.fill();
+  g.beginPath();
+  g.arc(t.x, t.y, outer, a0, a1);
+  g.arc(t.x, t.y, inner, a1, a0, true);
+  g.closePath();
+  g.fillStyle = "#7a4a3e";
+  g.fill();
+  ink(g, 2.2);
+  // The tall padded back, along the outside
+  g.beginPath();
+  g.arc(t.x, t.y, outer - 4, a0 + 0.05, a1 - 0.05);
+  g.strokeStyle = "#5a3430";
+  g.lineWidth = 7;
+  g.lineCap = "round";
+  g.stroke();
+  // Buttoned upholstery
+  g.fillStyle = "rgba(255,226,190,0.35)";
+  for (let a = a0 + 0.25; a < a1 - 0.1; a += 0.32) {
+    g.beginPath();
+    g.arc(t.x + Math.cos(a) * (inner + 7), t.y + Math.sin(a) * (inner + 7), 1.6, 0, Math.PI * 2);
+    g.fill();
+  }
 }
 
 function drawCafeCounter(g) {
@@ -3638,15 +4559,6 @@ function drawCafeCounter(g) {
   g.fillStyle = "#2e2622";
   g.fill();
   ink(g, 1.5);
-
-  // A stack of order coasters (they light up after the lighting pass)
-  [[356, 62], [344, 82]].forEach(([x, y]) => {
-    g.beginPath();
-    g.arc(x, y, 10, 0, Math.PI * 2);
-    g.fillStyle = "#3a2c26";
-    g.fill();
-    ink(g, 1.6);
-  });
 
   // Stools along the counter
   cafeStools.forEach((s) => {
@@ -3721,17 +4633,17 @@ function drawCafeRoundTable(g, t, cups) {
 
 function drawCafeFriendsTable(g) {
   const t = cafeFriendsTable;
-  drawCafeRoundTable(g, t, [[0, -46], [46, 4], [0, 50], [-46, 4]]);
+  drawCafeRoundTable(g, t, [[-24, -30], [24, -30], [24, 28], [-24, 28]]);
   // A plate of pastries to share
   g.fillStyle = "#efe6d8";
   g.beginPath();
-  g.arc(t.x + 30, t.y + 30, 11, 0, Math.PI * 2);
+  g.arc(t.x, t.y + 36, 11, 0, Math.PI * 2);
   g.fill();
   ink(g, 1.5);
   g.fillStyle = "#d9a45b";
   [[-3, -3], [4, -1], [0, 4]].forEach(([dx, dy]) => {
     g.beginPath();
-    g.arc(t.x + 30 + dx, t.y + 30 + dy, 3.8, 0, Math.PI * 2);
+    g.arc(t.x + dx, t.y + 36 + dy, 3.8, 0, Math.PI * 2);
     g.fill();
   });
 }
@@ -3783,28 +4695,8 @@ function drawCafeReader(g, r, i) {
   g.restore();
 }
 
-// The quiet light: a floor lamp beside the reading corner, glowing green
-// while the corner is calm. Its glow is added after the lighting pass.
-function drawCafeQuietLamp(g) {
-  const l = cafeQuietLamp;
-  g.fillStyle = "rgba(0,0,0,0.25)";
-  g.beginPath();
-  g.ellipse(l.x + 2, l.y + 8, 14, 5, 0, 0, Math.PI * 2);
-  g.fill();
-  g.beginPath();
-  g.arc(l.x, l.y, 9, 0, Math.PI * 2);
-  g.fillStyle = "#3a2c26";
-  g.fill();
-  ink(g, 1.6);
-  roundRect(g, l.x - 2, l.y - 36, 4, 34, 2);
-  g.fillStyle = "#3a2c26";
-  g.fill();
-  ink(g, 1.2);
-}
-
 // Glowing things that should shine through the evening darkness: the
-// caption screens (and the friends' captions), the order coaster, the rhythm
-// wall and the quiet light, plus a soft marker on each one you can learn about.
+// caption screens, and the friends' captions.
 function drawCafeScreens(g, t) {
   const glowDisc = (x, y, r, color) => {
     const grad = g.createRadialGradient(x, y, 0, x, y, r);
@@ -3872,83 +4764,20 @@ function drawCafeScreens(g, t) {
     g.stroke();
   });
   g.restore();
-
-  // Order coaster: every so often it glows and buzzes, "order up"
-  const orderUp = (t % 7) < 2.6;
-  if (orderUp) {
-    const buzz = Math.sin(t * 40) * 1.2;
-    glowDisc(356 + buzz, 62, 34, "rgba(255,190,90,0.5)");
-    g.strokeStyle = "#ffd28a";
-    g.lineWidth = 2.5;
-    g.beginPath();
-    g.arc(356 + buzz, 62, 7, 0, Math.PI * 2);
-    g.stroke();
-  } else {
-    g.strokeStyle = "rgba(255,210,138,0.35)";
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(356, 62, 7, 0, Math.PI * 2);
-    g.stroke();
-  }
-
-  // Rhythm wall: bars that move with the beat of the cafe's music
-  const rw = cafeRhythmWall;
-  const beat = 60 / 64;
-  const colors = ["#f7c26b", "#f29b6b", "#e8889a", "#b7a6f0", "#8fd3ff"];
-  for (let k = 0; k < 10; k++) {
-    const y = rw.y + 8 + k * 10.6;
-    const level = 0.35 + 0.65 * Math.abs(Math.sin((t / beat) * Math.PI + k * 0.7)) *
-      (0.6 + 0.4 * Math.sin(t * 1.3 + k));
-    const len = 4 + level * (rw.w - 10);
-    g.fillStyle = colors[k % colors.length];
-    roundRect(g, rw.x + rw.w - 4 - len, y, len, 6, 3);
-    g.fill();
-  }
-  glowDisc(rw.x, rw.y + rw.h / 2, 70, "rgba(232,136,154,0.18)");
-
-  // Quiet light: a calm green while the corner is quiet
-  const ql = cafeQuietLamp;
-  glowDisc(ql.x, ql.y - 40, 70, "rgba(127,209,139,0.35)");
-  g.beginPath();
-  g.arc(ql.x, ql.y - 40, 13, 0, Math.PI * 2);
-  g.fillStyle = "#9fe0a8";
-  g.fill();
-  ink(g, 1.8);
-  g.beginPath();
-  g.arc(ql.x, ql.y - 40, 5, 0, Math.PI * 2);
-  g.fillStyle = "#e9fff0";
-  g.fill();
-
-  // A soft pulsing marker on each one Alyssa can learn about
-  cafeTech.forEach((tech, i) => {
-    if (tech === cafeActiveTech) return;
-    const ph = (t * 0.8 + i * 0.25) % 1;
-    const mx = tech.id === "table" ? ft.x + ft.r - 6 : tech.id === "quiet" ? ql.x + 22 : tech.x;
-    const my = tech.id === "table" ? ft.y - ft.r + 6 : tech.id === "quiet" ? ql.y - 54 : tech.id === "rhythm" ? rw.y - 14 : tech.y - 22;
-    g.strokeStyle = `rgba(255,236,190,${0.8 * (1 - ph)})`;
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(mx, my, 5 + ph * 12, 0, Math.PI * 2);
-    g.stroke();
-    g.fillStyle = "rgba(255,236,190,0.95)";
-    g.beginPath();
-    g.arc(mx, my, 3.5, 0, Math.PI * 2);
-    g.fill();
-  });
 }
 
-// The words themselves, drawn last so no lantern hangs in front of them:
-// the friends' conversation, and "order up" when a coaster lights.
+// The words themselves, drawn last so no lantern hangs in front of them.
 function drawCafeCaptions(g, t) {
   const ft = cafeFriendsTable;
   const n = Math.floor(t / CAFE_LINE_SECONDS) % cafeConversation.length;
   const into = (t % CAFE_LINE_SECONDS) / CAFE_LINE_SECONDS;
   const [who, line] = cafeConversation[n];
   const friend = cafeFriends[who];
-  drawSpeakerCaption(g, friend.name, friend.color, line, ft.x, ft.y + 34, Math.min(1, into * 8, (1 - into) * 8));
-  if (t % 7 < 2.6) {
-    drawCaption(g, "order up: oat latte", 356, 100, 11, Math.min(1, (t % 7) * 4, (2.6 - (t % 7)) * 4));
-  }
+  // Just below their table, kept clear of the wall, and only for the first
+  // few seconds after Anna walks in.
+  const showFor = Math.max(0, Math.min(1, (CAFE_FRIENDS_CAPTION_SECONDS - cafeTime) / 0.6));
+  if (showFor === 0) return;
+  drawSpeakerCaption(g, friend.name, friend.color, line, ft.x - 70, ft.y + ft.r + 64, Math.min(1, into * 8, (1 - into) * 8) * showFor);
 }
 
 // A caption with the speaker's name in their colour, on a dark pill.
@@ -4079,10 +4908,10 @@ function renderCafe(now) {
 
   drawCafeRoom(g);
   cafeChairs.forEach((c) => drawCafeChair(g, c));
-  drawCafeQuietLamp(g);
+  cafeBoothTables.forEach((bt) => drawCafeBooth(g, bt));
 
   // Tables and people, drawn back-to-front so seated friends tuck behind the table.
-  const player = alyssa;
+  const player = anna;
   const drawables = [
     { y: cafeFriendsTable.y, draw: () => drawCafeFriendsTable(g) },
     ...cafeRoundTables.map((rt) => ({ y: rt.y, draw: () => drawCafeRoundTable(g, rt, [[-20, 14]]) })),
@@ -4091,18 +4920,87 @@ function renderCafe(now) {
       draw: () => drawCharacter(g, p, p.x, p.y, 1.4, animPhase + i * 1.9, false),
     })),
     ...cafeReaders.map((r, i) => ({ y: r.y, draw: () => drawCafeReader(g, r, i) })),
-    { y: player.y, draw: () => drawCharacter(g, player, player.x, player.y, 1.4, animPhase, !!player.moving) },
+    // While they chat, whoever's talking bobs along a little more.
+    { y: player.y, draw: () => drawCharacter(g, player, player.x, player.y, 1.4, chatPhase(player, animPhase), !!player.moving) },
     ...(jamieJoined
-      ? [{ y: jamie.y, draw: () => drawCharacter(g, jamie, jamie.x, jamie.y, 1.4, animPhase + 0.7, !!jamie.moving) }]
+      ? [{ y: jamie.y, draw: () => drawCharacter(g, jamie, jamie.x, jamie.y, 1.4, chatPhase(jamie, animPhase + 0.7), !!jamie.moving) }]
       : []),
   ];
   drawables.sort((a, b) => a.y - b.y).forEach((d) => d.draw());
 
   drawCafeLighting(t);
   drawCafeScreens(g, t);
+  drawCafeChat(g, t);
   cafeCandles.forEach((c, i) => drawCafeCandle(g, c, t, i));
   cafeLanterns.forEach((l, i) => drawCafeLantern(g, l, t, i));
   drawCafeCaptions(g, t);
+}
+
+// Who's talking at Anna and Jamie's table: they take turns, now and then
+// cutting in early.
+function cafeChatTalker() {
+  const turn = Math.floor(cafeChatTime / CAFE_CHAT_TURN);
+  return (turn + (turn % 3 === 2 ? 1 : 0)) % 2 ? jamie : anna;
+}
+
+function chatPhase(ch, phase) {
+  if (!cafeSeated) return phase;
+  return cafeChatTalker() === ch ? phase * 2.6 : phase * 1.3;
+}
+
+// Anna and Jamie having a great time: the table's screen lights toward
+// whoever's talking, little "talking" marks bounce over their heads, and
+// every so often they both crack up, with sparkles floating up. No words.
+function drawCafeChat(g, t) {
+  if (!cafeSeated || !jamieJoined) return;
+  const tb = cafeChatTable;
+  const talker = cafeChatTalker();
+  const color = talker === anna ? HEARING_AID_COLOR : jamie.hearingAid;
+  const angle = Math.atan2(talker.y - 20 - tb.y, talker.x - tb.x);
+  g.save();
+  g.lineCap = "round";
+  g.strokeStyle = color;
+  g.lineWidth = 4;
+  g.beginPath();
+  g.arc(tb.x, tb.y - 4, 12, angle - 0.7, angle + 0.7);
+  g.stroke();
+
+  const into = (cafeChatTime % CAFE_CHAT_TURN) / CAFE_CHAT_TURN;
+  g.globalAlpha = Math.min(1, into * 8, (1 - into) * 8);
+  g.lineWidth = 2;
+  [0, 1].forEach((k) => {
+    const pop = Math.sin(t * 9 + k) * 1.5;
+    g.beginPath();
+    g.arc(talker.x, talker.y - 50 - pop, 5 + k * 5, Math.PI * 1.15, Math.PI * 1.85);
+    g.stroke();
+  });
+  g.restore();
+
+  // Laughing together, every few seconds
+  const laugh = cafeChatTime % 5.5;
+  if (laugh > 3.6) {
+    const k = (laugh - 3.6) / 1.9;
+    [anna, jamie].forEach((ch, n) => {
+      for (let i = 0; i < 3; i++) {
+        const sx = ch.x + (i - 1) * 12 + Math.sin(t * 3 + i + n) * 3;
+        const sy = ch.y - 52 - k * 30 - i * 5;
+        drawSparkle(g, sx, sy, 3.2 - i * 0.6, `rgba(255,226,150,${Math.min(1, (1 - k) * 2)})`);
+      }
+    });
+  }
+}
+
+// A little four-pointed star.
+function drawSparkle(g, x, y, r, color) {
+  g.fillStyle = color;
+  g.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    const rr = i % 2 ? r * 0.35 : r;
+    g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  g.closePath();
+  g.fill();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -4292,7 +5190,7 @@ function drawSpeechHint(g, p, scale) {
 function nearestSpeaker() {
   let best = null, bestDist = QUOTE_REACH;
   people.forEach((p) => {
-    const d = Math.hypot(alyssa.x - p.x, alyssa.y - p.y);
+    const d = Math.hypot(anna.x - p.x, anna.y - p.y);
     if (d < bestDist) {
       best = p;
       bestDist = d;
@@ -4359,10 +5257,11 @@ function tick(now) {
 }
 
 function update(dt) {
-  stepCharacter(alyssa, dt, MOVE_SPEED);
+  stepCharacter(anna, dt, MOVE_SPEED);
   updateCompanion(dt);
   updateCamera(dt);
   updateArea();
+  evening += Math.sign(eveningTarget - evening) * Math.min(Math.abs(eveningTarget - evening), dt / EVENING_FADE_SECONDS);
 }
 
 function render() {
@@ -4370,8 +5269,8 @@ function render() {
 
   updateEnterPrompt();
   updateQuoteBubble();
-  minimapDotEl.style.left = `${(alyssa.x / WORLD.width) * 100}%`;
-  minimapDotEl.style.top = `${(alyssa.y / WORLD.height) * 100}%`;
+  minimapDotEl.style.left = `${(anna.x / WORLD.width) * 100}%`;
+  minimapDotEl.style.top = `${(anna.y / WORLD.height) * 100}%`;
 
   ctx.save();
   ctx.scale(zoom, zoom);
@@ -4382,7 +5281,7 @@ function render() {
   buildings.forEach((b) => drawBuilding(ctx, b));
   streetSigns().forEach((sign) => drawStreetSign(ctx, sign));
 
-  // In the overview Alyssa is drawn larger, with a ring, so she's easy to spot.
+  // In the overview Anna is drawn larger, with a ring, so she's easy to spot.
   const spot = 1 - followAmount();
   if (spot > 0) {
     ctx.save();
@@ -4390,20 +5289,114 @@ function render() {
     ctx.strokeStyle = "#5f7fa3";
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(alyssa.x, alyssa.y - 8, 44 + Math.sin(animPhase * 3) * 4, 0, Math.PI * 2);
+    ctx.arc(anna.x, anna.y - 8, 44 + Math.sin(animPhase * 3) * 4, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
   const scale = 1.4 * labelScale(2, 0.55);
-  [...people, alyssa, ...(jamieJoined ? [jamie] : [])]
+  [...people, anna, ...(jamieJoined ? [jamie] : [])]
     .sort((a, b) => a.y - b.y)
     .forEach((ch, i) => {
-      const moving = (ch === alyssa || ch === jamie) && !!ch.moving;
+      const moving = (ch === anna || ch === jamie) && !!ch.moving;
       drawCharacter(ctx, ch, ch.x, ch.y, scale, animPhase + i * 1.3, moving);
-      if (ch !== alyssa && ch !== jamie && ch !== activeSpeaker) drawSpeechHint(ctx, ch, scale);
+      if (ch !== anna && ch !== jamie && ch !== activeSpeaker) drawSpeechHint(ctx, ch, scale);
     });
 
+  drawEvening(ctx);
   ctx.restore();
+}
+
+/* ---------------------------------------------------------------------- */
+/* Evening: once Anna leaves Form Studio with her cuff on, it turns to    */
+/* early evening, golden light with the sun low over the sea. Once she    */
+/* and Jamie leave Jamie's house, the sun sets: the town takes on a warm, */
+/* dusky light, and the street lamps and doorways glow.                   */
+/* ---------------------------------------------------------------------- */
+
+const EVENING_FADE_SECONDS = 3.5;
+let evening = 0; // 0 is daytime, EARLY_EVENING is golden hour, 1 is sunset
+const EARLY_EVENING = 0.45;
+let eveningTarget = 0;
+
+function drawEvening(g) {
+  if (evening <= 0) return;
+  // How far into early evening (golden hour) and then into sunset we are.
+  const early = Math.min(1, evening / EARLY_EVENING);
+  const e = Math.max(0, (evening - EARLY_EVENING) / (1 - EARLY_EVENING));
+  const mix = (a, b) => a.map((v, i) => Math.round(v + (b[i] - v) * e)).join(",");
+  const { width: W, height: H } = WORLD;
+  g.save();
+
+  // Light over everything: soft gold in early evening, then at sunset golden
+  // by the sea, deepening to lavender further inland.
+  g.globalCompositeOperation = "multiply";
+  const dusk = g.createLinearGradient(0, 0, 0, H);
+  dusk.addColorStop(0, `rgba(${mix([255, 205, 140], [255, 150, 90])},${0.35 * early + 0.35 * e})`);
+  dusk.addColorStop(0.35, `rgba(${mix([250, 200, 150], [220, 125, 125])},${0.3 * early + 0.36 * e})`);
+  dusk.addColorStop(1, `rgba(${mix([235, 195, 160], [95, 85, 160])},${0.3 * early + 0.38 * e})`);
+  g.fillStyle = dusk;
+  g.fillRect(0, 0, W, H);
+
+  // The sun low over the sea (pale gold, turning orange as it sets), and
+  // its glow across the water
+  g.globalCompositeOperation = "screen";
+  const sunX = W * 0.72, sunY = -18;
+  const glow = g.createRadialGradient(sunX, sunY, 10, sunX, sunY, 520);
+  glow.addColorStop(0, `rgba(${mix([255, 225, 150], [255, 190, 110])},${0.5 * early + 0.25 * e})`);
+  glow.addColorStop(0.4, `rgba(${mix([255, 200, 130], [255, 140, 90])},${0.18 * early + 0.12 * e})`);
+  glow.addColorStop(1, "rgba(255,120,90,0)");
+  g.fillStyle = glow;
+  g.fillRect(sunX - 520, 0, 1040, 520);
+  g.fillStyle = `rgba(${mix([255, 228, 160], [255, 170, 80])},${0.95 * early})`;
+  g.beginPath();
+  g.arc(sunX, sunY, 54, 0, Math.PI * 2);
+  g.fill();
+  // Glints of sunlight on the waves, in a path toward the shore
+  for (let i = 0; i < 26; i++) {
+    const gy = 30 + i * 3.4;
+    const spread = 20 + i * 4.5;
+    const gx = sunX + Math.sin(i * 2.7 + animPhase * 1.5) * spread;
+    const len = 10 + (i % 3) * 6;
+    g.fillStyle = `rgba(255,220,150,${(0.55 + 0.35 * Math.sin(animPhase * 3 + i)) * early})`;
+    g.fillRect(gx - len / 2, gy, len, 1.6);
+  }
+
+  // Warm light from every doorway
+  buildings.forEach((b) => {
+    if (!b.door) return;
+    const d = doorOf(b);
+    const pool = g.createRadialGradient(d.x, d.y, 4, d.x, d.y, 70);
+    pool.addColorStop(0, `rgba(255,190,110,${0.45 * e})`);
+    pool.addColorStop(1, "rgba(255,190,110,0)");
+    g.fillStyle = pool;
+    g.fillRect(d.x - 70, d.y - 70, 140, 140);
+  });
+
+  // The street lamps, switched on: a bright lantern, a halo round it and a
+  // pool of light on the cobbles below
+  lamps.forEach((l, i) => {
+    const flicker = 1 + Math.sin(animPhase * 5 + i * 1.7) * 0.03;
+    const pool = g.createRadialGradient(l.x, l.y, 4, l.x, l.y, 80 * flicker);
+    pool.addColorStop(0, `rgba(255,200,120,${0.55 * e})`);
+    pool.addColorStop(1, "rgba(255,200,120,0)");
+    g.fillStyle = pool;
+    g.beginPath();
+    g.ellipse(l.x, l.y, 80 * flicker, 44 * flicker, 0, 0, Math.PI * 2);
+    g.fill();
+    const halo = g.createRadialGradient(l.x, l.y - 56, 2, l.x, l.y - 56, 46 * flicker);
+    halo.addColorStop(0, `rgba(255,236,180,${0.9 * e})`);
+    halo.addColorStop(0.3, `rgba(255,200,120,${0.45 * e})`);
+    halo.addColorStop(1, "rgba(255,190,110,0)");
+    g.fillStyle = halo;
+    g.fillRect(l.x - 50, l.y - 106, 100, 100);
+  });
+  g.globalCompositeOperation = "source-over";
+  lamps.forEach((l) => {
+    g.fillStyle = `rgba(255,246,214,${e})`;
+    roundRect(g, l.x - 5, l.y - 62, 10, 12, 2);
+    g.fill();
+  });
+  g.restore();
 }
 
 requestAnimationFrame(tick);

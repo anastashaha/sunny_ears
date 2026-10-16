@@ -42,7 +42,7 @@ html, body {
   transition: opacity 0.4s ease;
 }
 
-/* Scene switching: world <-> cafe, world <-> lab <-> render.
+/* Scene switching: world <-> cafe, world <-> lab, world <-> Jamie's house.
    Only the active scene is interactive/visible; others fade out in place. */
 #app:not([data-scene="world"]) #world,
 #app:not([data-scene="world"]) .hud-top {
@@ -67,8 +67,7 @@ html, body {
 
 #app[data-scene="cafe"] #cafeScene,
 #app[data-scene="lab"] #labScene,
-#app[data-scene="subtitles"] #subsScene,
-#app[data-scene="render"] #renderScene {
+#app[data-scene="subtitles"] #subsScene {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -114,17 +113,6 @@ html, body {
   justify-content: flex-end;
   gap: 16px;
   flex-wrap: wrap;
-}
-
-.hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-soft);
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 999px;
-  padding: 6px 16px;
-  backdrop-filter: blur(10px);
 }
 
 kbd {
@@ -210,15 +198,6 @@ kbd {
   text-shadow: 0 0 18px rgba(233, 184, 114, 0.45);
 }
 
-.cafe-subtitle {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--cafe-accent);
-}
-
 .music-pill {
   position: absolute;
   top: 24px;
@@ -279,43 +258,13 @@ kbd {
   .music-bars span { animation: none; transform: scaleY(0.6); }
 }
 
-.cafe-hint {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: calc(100% - 32px);
-  text-align: center;
-  color: var(--cafe-ink-soft);
-  background: var(--cafe-panel);
-  border-color: var(--cafe-border);
-}
-
-/* The card explaining a cafe "subtitle", in the cafe's evening colours. */
-.subs-card.cafe-card {
-  z-index: 1;
-  background: rgba(38, 28, 26, 0.94);
-  border-color: var(--cafe-border);
-  border-top-color: var(--cafe-accent);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-}
-
-.subs-card.cafe-card .subs-card-option { color: var(--cafe-accent); }
-.subs-card.cafe-card .subs-card-name { color: var(--cafe-ink); }
-.subs-card.cafe-card .subs-card-desc { color: var(--cafe-ink-soft); }
-
-.cafe-hint kbd {
-  background: rgba(255, 226, 180, 0.12);
-  color: var(--cafe-ink);
-}
-
 @media (max-width: 640px) {
   .cafe-header { top: 60px; }
   .cafe-title { font-size: 24px; }
   .music-pill { top: 14px; right: 14px; }
 }
 
-/* --- Minimap: the village and its Z path, with Alyssa's position --- */
+/* --- Minimap: the village and its Z path, with Anna's position --- */
 
 .minimap {
   background: var(--panel-bg);
@@ -371,7 +320,7 @@ kbd {
   pointer-events: none;
 }
 
-/* --- Banner announcing each block as Alyssa walks into it --- */
+/* --- Banner announcing each block as Anna walks into it --- */
 
 .area-banner {
   position: absolute;
@@ -420,7 +369,7 @@ kbd {
   .area-banner { top: 150px; }
 }
 
-/* --- Zoom: overview of the whole village <-> following Alyssa --- */
+/* --- Zoom: overview of the whole village <-> following Anna --- */
 
 .zoom-controls {
   position: absolute;
@@ -483,7 +432,7 @@ kbd {
   .zoom-controls { bottom: auto; top: 76px; right: 14px; }
 }
 
-/* --- Lab scene: the Wearables Lab, a spa-like showroom --- */
+/* --- Lab scene: the Form Studio, a cozy lounge showing off the cuffs --- */
 
 .lab-scene {
   background: radial-gradient(circle at 50% 45%, #fffaf0 0%, #e9e3cf 80%);
@@ -506,15 +455,6 @@ kbd {
   transform: translateX(-50%);
   text-align: center;
   pointer-events: none;
-}
-
-.lab-eyebrow {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
 }
 
 .lab-title {
@@ -544,6 +484,32 @@ kbd {
 }
 
 .lab-prompt[hidden] { display: none; }
+
+/* Shown when the browser blocks a new tab: a button to open it with a click. */
+.open-link {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: #a87f2e;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 12px 30px rgba(168, 127, 46, 0.35);
+  animation: open-link-in 0.3s ease;
+}
+
+@keyframes open-link-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.open-link:hover { background: #8f6b24; }
+.open-link[hidden] { display: none; }
 
 .lab-prompt::after {
   content: "";
@@ -578,72 +544,12 @@ kbd {
   to { opacity: 1; transform: translate(-50%, -100%); }
 }
 
-.lab-hint {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: calc(100% - 32px);
-  text-align: center;
-}
-
-/* --- Render scene: the question, above the 3D rendering of the product --- */
-
-.render-scene {
-  padding: 72px 16px 24px;
-  gap: 24px;
-  justify-content: safe center; /* on short windows, never slide up under the back button */
-  background: radial-gradient(circle at 50% 55%, #fffaf0 0%, #efe4cf 75%);
-}
-
-.render-question {
-  max-width: 720px;
-  margin: 0;
-  text-align: center;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: 40px;
-  line-height: 1.15;
-  color: var(--ink);
-}
-
-.render-placeholder {
-  width: min(640px, 100%, (100vh - 220px) * 1.6);
-  flex-shrink: 0;
-  aspect-ratio: 16 / 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 2px dashed rgba(62, 50, 38, 0.35);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(246, 178, 110, 0.18), rgba(246, 178, 110, 0) 60%),
-    rgba(255, 255, 255, 0.6);
-}
-
-.render-placeholder-label {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--blue);
-}
-
-.render-placeholder-note {
-  font-size: 12.5px;
-  color: var(--ink-soft);
-}
-
 @media (max-width: 640px) {
   .lab-header { top: 60px; }
   .lab-title { font-size: 24px; }
-  .render-question { font-size: 28px; }
 }
 
-/* --- Quote bubbles: what people on the map say when Alyssa walks up --- */
+/* --- Quote bubbles: what people on the map say when Anna walks up --- */
 
 .quote-bubble {
   --tail-x: 50%;
@@ -707,7 +613,7 @@ kbd {
 /* --- Jamie's house: the "subtitles for the world" in her home --- */
 
 .subs-scene {
-  background: radial-gradient(circle at 50% 45%, #fffaf0 0%, #efe2c8 80%);
+  background: radial-gradient(circle at 50% 45%, #fffaf0 0%, #f1e8d9 80%);
 }
 
 #subsCanvas {
@@ -720,7 +626,7 @@ kbd {
 
 .subs-scene .back-btn { z-index: 1; }
 
-/* Jamie and Alyssa's conversation: a quote bubble you can click (or press E) to carry on. */
+/* Jamie and Anna's conversation: a quote bubble you can click (or press E) to carry on. */
 .story-bubble {
   max-width: min(380px, calc(100vw - 24px));
   pointer-events: auto;
@@ -753,186 +659,4 @@ kbd {
   color: var(--ink-soft);
 }
 
-/* Describes the option Alyssa is standing near; sits just above the hint bar. */
-.subs-card {
-  position: absolute;
-  left: 50%;
-  bottom: 64px;
-  transform: translateX(-50%);
-  width: min(420px, calc(100% - 32px));
-  padding: 14px 20px 16px;
-  text-align: center;
-  background: #ffffff;
-  border: 1px solid rgba(35, 56, 77, 0.08);
-  border-top: 3px solid var(--green);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  pointer-events: none;
-  animation: quote-in-card 0.25s ease;
-}
-
-.subs-card[hidden] { display: none; }
-
-.subs-card-option {
-  margin: 0 0 2px;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--green);
-}
-
-.subs-card-name {
-  margin: 0 0 4px;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.subs-card-desc {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-
-@keyframes quote-in-card {
-  from { opacity: 0; transform: translate(-50%, 8px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-/* --- Phone pop-up: welcomes Alyssa to the app once she has her hearing aid --- */
-
-.phone-popup {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 16px;
-  background: rgba(62, 50, 38, 0.38);
-  backdrop-filter: blur(3px);
-  animation: phone-fade 0.3s ease;
-}
-
-.phone-popup[hidden] { display: none; }
-
-.phone {
-  width: min(280px, 72vw, (100vh - 120px) * 0.47);
-  aspect-ratio: 9 / 19;
-  padding: 11px;
-  border-radius: 44px;
-  background: #2b2622;
-  box-shadow:
-    inset 0 0 0 2px #514840,
-    0 30px 60px rgba(30, 22, 14, 0.4);
-  animation: phone-rise 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-
-.phone-screen {
-  position: relative;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  border-radius: 34px;
-  overflow: hidden;
-  background: linear-gradient(170deg, #e4f0fa 0%, #fdf7ea 70%);
-}
-
-.phone-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 22px 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.phone-island {
-  width: 74px;
-  height: 22px;
-  border-radius: 999px;
-  background: #1c1815;
-}
-
-.phone-battery {
-  position: relative;
-  width: 22px;
-  height: 11px;
-  border: 1.5px solid var(--ink);
-  border-radius: 3px;
-}
-
-.phone-battery::after {
-  content: "";
-  position: absolute;
-  inset: 1.5px 4px 1.5px 1.5px;
-  border-radius: 1px;
-  background: var(--ink);
-}
-
-.phone-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 0 24px 40px;
-  text-align: center;
-}
-
-.phone-icon {
-  width: 64px;
-  height: 64px;
-  filter: drop-shadow(0 8px 16px rgba(63, 143, 214, 0.35));
-}
-
-.phone-message {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--ink);
-}
-
-.phone-close {
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background: #3f8fd6;
-  border: none;
-  border-radius: 999px;
-  padding: 10px 20px;
-  cursor: pointer;
-  box-shadow: 0 10px 24px rgba(63, 143, 214, 0.35);
-  animation: phone-fade 0.45s ease;
-}
-
-.phone-close:hover { background: #3580c4; }
-
-.phone-close kbd {
-  margin-left: 4px;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
-}
-
-@keyframes phone-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes phone-rise {
-  from { opacity: 0; transform: translateY(60px) scale(0.92); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .phone, .phone-popup, .phone-close { animation: none; }
 }
